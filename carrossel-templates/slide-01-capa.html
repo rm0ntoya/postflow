@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Slide 01 — Capa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#222;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',system-ui,sans-serif}
+  .slide{
+    position:relative;width:1080px;height:1350px;overflow:hidden;color:#fff;
+    background:#000 url('{{BG_IMAGE_URL}}') center/cover no-repeat;
+  }
+  .overlay{
+    position:absolute;inset:0;
+    background:linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.85) 30%,rgba(0,0,0,.55) 55%,rgba(0,0,0,.15) 78%,transparent 92%);
+  }
+  .author{
+    position:absolute;left:60px;bottom:520px;display:flex;align-items:center;gap:16px;z-index:3;
+  }
+  .author img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.9)}
+  .author .handle{font-size:30px;font-weight:700;letter-spacing:.2px;color:#fff}
+  .content{position:absolute;left:60px;right:60px;bottom:140px;z-index:3}
+  h1.title{
+    font-family:'Anton','Inter',sans-serif;
+    font-weight:400;
+    font-size:108px;
+    line-height:1.0;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+    color:#fff;
+    text-shadow:0 4px 24px rgba(0,0,0,.55);
+  }
+  h1.title .hl{color:#FFE600}
+  p.body{
+    margin-top:36px;
+    font-family:'Inter',sans-serif;
+    font-weight:500;
+    font-size:32px;
+    line-height:1.35;
+    color:#EAEAEA;
+    max-width:880px;
+  }
+  .page{position:absolute;right:48px;bottom:40px;z-index:3;font-size:22px;font-weight:600;color:rgba(255,255,255,.55);letter-spacing:1px}
+</style>
+</head>
+<body>
+  <article class="slide">
+    <div class="overlay"></div>
+
+    <div class="author">
+      <img src="{{AVATAR_URL}}" alt="" />
+      <span class="handle">{{HANDLE}}</span>
+    </div>
+
+    <div class="content">
+      <h1 class="title">{{TITLE}}</h1>
+      <p class="body">{{BODY}}</p>
+    </div>
+
+    <div class="page">{{SLIDE_NUMBER}}</div>
+  </article>
+</body>
+</html>

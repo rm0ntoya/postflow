@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Slide 05 — Texto + 2 imagens lado a lado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#222;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',system-ui,sans-serif}
+  .slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:#0A0A0A;color:#fff;padding:140px 90px 90px}
+  .author{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+  .author img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(255,255,255,.85)}
+  .author .handle{font-size:28px;font-weight:700;color:#fff}
+  h1.title{font-family:'Anton','Inter',sans-serif;font-size:84px;line-height:1.02;letter-spacing:.5px;text-transform:uppercase;color:#fff}
+  h1.title .hl{color:#FFE600}
+  p.body{margin-top:32px;font-weight:500;font-size:32px;line-height:1.4;color:#D4D4D4;max-width:900px}
+  .pair{position:absolute;left:90px;right:90px;bottom:120px;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .pair .cell{aspect-ratio:1/1;border-radius:18px;overflow:hidden;background:#181818}
+  .pair .cell img{width:100%;height:100%;object-fit:cover;display:block}
+  .page{position:absolute;right:48px;bottom:30px;font-size:22px;font-weight:600;color:rgba(255,255,255,.4)}
+</style>
+</head>
+<body>
+  <article class="slide">
+    <div class="author">
+      <img src="{{AVATAR_URL}}" alt="" />
+      <span class="handle">{{HANDLE}}</span>
+    </div>
+    <h1 class="title">{{TITLE}}</h1>
+    <p class="body">{{BODY}}</p>
+    <div class="pair">
+      <div class="cell"><img src="{{IMAGE_BOTTOM_1_URL}}" alt="" /></div>
+      <div class="cell"><img src="{{IMAGE_BOTTOM_2_URL}}" alt="" /></div>
+    </div>
+    <div class="page">{{SLIDE_NUMBER}}</div>
+  </article>
+</body>
+</html>

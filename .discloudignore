@@ -1,0 +1,38 @@
+# Arquivos e pastas a serem ignorados no ZIP para o Discloud
+
+# Dependências (O Discloud instala via npm install)
+node_modules/
+
+# Build do Next.js (O Discloud executa npm run build no deploy)
+.next/
+out/
+
+# Arquivos locais de ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git/
+.gitignore
+
+# Cache e Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.cache
+
+# Pastas de documentos/ideias (Opcional: se forem pesadas)
+docs/
+scratch/
+
+# Imagens de teste ou assets grandes que não são necessários em produção
+public/img/test/
+*.mjs
+codingaistudio.js
+promptgerarimagem.txt
+test-image.mjs
+# carrossel-templates/ # Remova o # se os templates já estiverem embutidos no código
