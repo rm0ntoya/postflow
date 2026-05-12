@@ -296,9 +296,9 @@ function buildCanvasSlides(
       els.push({ id: `${cid}-s${i}-img1`, type: "image", imagePrompt: gs.imagePrompt, x: 190, y: 80, w: 700, h: 700, radius: 350 });
       els.push({ id: `${cid}-s${i}-dot`, type: "shape", shape: "circle", x: W/2-12, y: 36, w: 24, h: 24, color: accentColor, opacity: 1 });
       addProfile(848);
-      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 940, w: W-120, h: 260, fontSize: 96, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
-      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-60, y: 1092, w: 120, h: 5, color: accentColor, radius: 3, opacity: 1 });
-      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 100, y: 1112, w: W-200, h: 180, fontSize: 34, weight: 500, color: "#D0D0D0", font: SG, align: "center", lineHeight: 1.4 });
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 920, w: W-120, h: 220, fontSize: 96, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-60, y: 1158, w: 120, h: 5, color: accentColor, radius: 3, opacity: 1 });
+      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 100, y: 1178, w: W-200, h: 130, fontSize: 34, weight: 500, color: "#D0D0D0", font: SG, align: "center", lineHeight: 1.4 });
 
     } else if (imgTpl === 11) {
       // Full-bleed bg image + diagonal accent faixa + text bottom
