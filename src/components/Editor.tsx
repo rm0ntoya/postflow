@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Send, Sparkles, MessageCircle, X } from "lucide-react";
 import Icon from "./Icon";
 import SlidePreview, { resolveBgStyle, CANVAS_W, CANVAS_H } from "./SlidePreview";
 import Toast from "./Toast";
 import { ICarousel, ISlide, IElement } from "@/models/Carousel";
+
+interface ChatMsg { role: "user" | "assistant"; content: string; actions?: string[]; }
 import {
   TextProps, ShapeProps, ImageProps, ProfileProps,
   BackgroundPropsPanel, SlidePropsPanel, LayersList,
@@ -22,6 +25,8 @@ interface EditorProps {
   onSave: (updated: Draft & { _id?: string }) => Promise<void>;
 }
 
+const THUMB_SCALE = 176 / CANVAS_W;
+
 export default function Editor({ carousel, generatingSlide = null, generatingProgress = 0, externallyGeneratedImages = {}, onBack, onSave }: EditorProps) {
   const [draft, setDraft] = useState<Draft & { _id?: string }>(() => JSON.parse(JSON.stringify(carousel)));
   const [selectedSlide, setSelectedSlide] = useState(0);
@@ -36,10 +41,148 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [showAddSlide, setShowAddSlide] = useState(false);
   const [addingSlide, setAddingSlide] = useState(false);
   const [toast, setToast] = useState("");
+  const [viewMode, setViewMode] = useState<"isolated" | "all">("isolated");
+  const [chatOpen, setChatOpen] = useState(false);
+
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 3000); };
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Sync bg images from parent
+  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([
+    { role: "assistant", content: "Olá! Sou seu agente de edição. Me diga o que quer mudar no carrossel — posso editar textos, cores, fundos e muito mais." },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatStreaming, setChatStreaming] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  function extractActions(text: string): { actions: any[]; displayText: string } {
+    const actions: any[] = [];
+    const blockMatch = text.match(/ACTIONS:\n([\s\S]*?)(?:\n\n|$)/);
+    let displayText = text;
+    if (blockMatch) {
+      displayText = text.replace(blockMatch[0], "").trim();
+      const lines = blockMatch[1].split("\n").map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        try { actions.push(JSON.parse(line)); } catch {}
+      }
+    }
+    const legacyRe = /\[\[ACTION:(.*?)\]\]/g;
+    let m;
+    while ((m = legacyRe.exec(displayText)) !== null) {
+      try {
+        actions.push(JSON.parse(m[1]));
+        displayText = displayText.replace(m[0], "");
+      } catch {}
+    }
+    return { actions, displayText: displayText.trim() };
+  }
+
+  function applyAction(action: any) {
+    try {
+      switch (action.type) {
+        case "editText":
+          if (action.slideIndex != null && action.text != null) {
+            setDraft((d) => {
+              const slide = d.slides[action.slideIndex];
+              if (!slide) return d;
+              const textEls = slide.elements.filter((e: IElement) => e.type === "text");
+              const target = action.elementIndex != null
+                ? textEls[action.elementIndex]
+                : action.elementId
+                  ? slide.elements.find((e: IElement) => e.id === action.elementId)
+                  : textEls[0];
+              if (!target) return d;
+              const slides = d.slides.map((s, i) =>
+                i !== action.slideIndex ? s : {
+                  ...s,
+                  elements: s.elements.map((e: IElement) =>
+                    e.id !== target.id ? e : { ...e, text: action.text, segments: undefined }
+                  ),
+                }
+              );
+              return { ...d, slides };
+            });
+          }
+          break;
+        case "editAccentColor":
+          if (action.color) setDraft((d) => ({ ...d, accentColor: action.color }));
+          break;
+        case "editSlideBackground":
+          if (action.slideIndex != null && action.bgOverride) {
+            setDraft((d) => {
+              const slides = d.slides.map((s, i) =>
+                i === action.slideIndex ? { ...s, bgOverride: action.bgOverride } : s
+              );
+              return { ...d, slides };
+            });
+          }
+          break;
+        case "selectSlide":
+          if (action.slideIndex != null) setSelectedSlide(action.slideIndex);
+          break;
+      }
+    } catch {}
+  }
+
+  async function sendChat() {
+    const msg = chatInput.trim();
+    if (!msg || chatLoading) return;
+    setChatInput("");
+    setChatMsgs((prev) => [...prev, { role: "user", content: msg }]);
+    setChatLoading(true);
+    setChatStreaming("");
+
+    const history = chatMsgs.map((m) => ({ role: m.role, content: m.content }));
+
+    try {
+      const res = await fetch(`/api/carousel/${draft._id}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, history, carousel: draft }),
+      });
+
+      if (!res.body) throw new Error("No stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(line.slice(6));
+            if (json.text) {
+              full += json.text;
+              setChatStreaming(full);
+              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+          } catch {}
+        }
+      }
+
+      const { actions, displayText } = extractActions(full);
+      const actionLabels = actions.map(a => { applyAction(a); return a.type as string; });
+
+      setChatMsgs((prev) => [...prev, {
+        role: "assistant",
+        content: displayText.trim(),
+        actions: actionLabels.length ? actionLabels : undefined,
+      }]);
+    } catch {
+      setChatMsgs((prev) => [...prev, { role: "assistant", content: "Erro ao conectar com o agente. Tente novamente." }]);
+    } finally {
+      setChatLoading(false);
+      setChatStreaming("");
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
   useEffect(() => {
     if (Object.keys(externallyGeneratedImages).length === 0) return;
     setDraft((d) => {
@@ -55,7 +198,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     });
   }, [externallyGeneratedImages]);
 
-  // Sync element imageUrls from parent carousel prop into draft (auto-generation updates)
   useEffect(() => {
     setDraft((d) => {
       let changed = false;
@@ -128,7 +270,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
 
   const addSlide = (newSlide?: ISlide) => {
     pushHistory();
-    const slide: ISlide = newSlide ?? {
+    const s: ISlide = newSlide ?? {
       id: `s${Date.now()}`,
       bgKey: "noir",
       bgOverride: "#000000",
@@ -136,13 +278,12 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     };
     setDraft((d) => {
       const slides = [...d.slides];
-      // Insert before last slide (CTA) if more than 1 slide exists
       const insertIdx = slides.length > 1 ? slides.length - 1 : slides.length;
-      slides.splice(insertIdx, 0, slide);
+      slides.splice(insertIdx, 0, s);
       return { ...d, slides };
     });
     setDraft((d) => {
-      const insertIdx = d.slides.findIndex((s) => s.id === slide.id);
+      const insertIdx = d.slides.findIndex((sl) => sl.id === s.id);
       setSelectedSlide(insertIdx >= 0 ? insertIdx : d.slides.length - 2);
       return d;
     });
@@ -159,7 +300,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
         body: JSON.stringify({ hasImage }),
       });
       let data: { slide?: ISlide; error?: string } = {};
-      try { data = await res.json(); } catch { /* empty */ }
+      try { data = await res.json(); } catch {}
       if (res.ok && data.slide) {
         addSlide(data.slide);
         showToast("Slide gerado com IA!");
@@ -261,11 +402,8 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
         body: JSON.stringify(body),
       });
 
-      // Safe JSON parse — API may return empty body on timeout or server crash
       let data: { url?: string; error?: string } = {};
-      try {
-        data = await res.json();
-      } catch {
+      try { data = await res.json(); } catch {
         showToast("Erro: resposta inválida da API. Tente novamente.");
         return;
       }
@@ -305,18 +443,14 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
         import("jszip"),
       ]);
 
-      // Ensure all fonts (TheBoldFont, Space Grotesk, etc.) are fully loaded
       await document.fonts.ready;
 
       const zip = new JSZip();
       const frames = document.querySelectorAll<HTMLElement>("[data-slide-frame]");
       const total = frames.length;
 
-      // Off-screen container for full-size renders — avoids zoom transform quality loss
       const exportHost = document.createElement("div");
       exportHost.setAttribute("aria-hidden", "true");
-      // visibility:hidden and z-index negativo fazem html2canvas pular o render
-      // Usar só posição off-screen — elemento precisa ser visível para captura funcionar
       exportHost.style.cssText = [
         "position:fixed",
         "top:-99999px",
@@ -331,17 +465,12 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
       for (let i = 0; i < total; i++) {
         setExportProgress(`Exportando ${i + 1}/${total}…`);
         const frame = frames[i];
-
-        // Clone the entire slide frame (copies inline styles including bgImage, bgColor)
         const clone = frame.cloneNode(true) as HTMLElement;
-
-        // Expand clone to full canvas size
         clone.style.width  = `${CANVAS_W}px`;
         clone.style.height = `${CANVAS_H}px`;
         clone.style.borderRadius = "0";
         clone.style.position = "relative";
 
-        // Remove zoom transform from the elements container so text/shapes render at native size
         const elContainer = clone.querySelector<HTMLElement>("[data-elements-container]");
         if (elContainer) {
           elContainer.style.transform = "none";
@@ -349,7 +478,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           elContainer.style.height = `${CANVAS_H}px`;
         }
 
-        // Remove selection handles and editing UI artifacts from clone
         clone.querySelectorAll<HTMLElement>(".handle, .selected").forEach((el) => {
           el.style.outline = "none";
           el.style.boxShadow = "none";
@@ -358,7 +486,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
 
         exportHost.appendChild(clone);
 
-        // Capture at 2x (2160×2700) — text now renders at full native size → sharp
         const canvas = await html2canvas(clone, {
           scale: 2,
           useCORS: true,
@@ -447,87 +574,249 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
 
   const accentColor = draft.accentColor || "#FFD700";
 
+  const slideLabel = (idx: number) =>
+    idx === 0 ? "Capa" : idx === draft.slides.length - 1 ? "CTA" : "Desenvolvimento";
+
   return (
     <div className="editor">
-      <div className="editor-tools">
-        <button className="tool-btn active" title="Selecionar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 2l8 20 2-8 8-2L2 2z"/></svg>
-        </button>
-        <div className="tool-divider"/>
-        <button className="tool-btn" onClick={addText} title="Adicionar texto"><Icon name="type" size={18}/></button>
-        <button className="tool-btn" onClick={addImage} title="Adicionar imagem box"><Icon name="image" size={18}/></button>
-        <button className="tool-btn" onClick={addShape} title="Adicionar forma"><Icon name="shapes" size={18}/></button>
-        <button className="tool-btn" onClick={addProfileEl} title="Adicionar perfil">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-        <div className="tool-divider"/>
-        <button className="tool-btn" onClick={() => setPropsTab("background")} title="Fundo"><Icon name="palette" size={18}/></button>
-        <button className="tool-btn" onClick={() => setPropsTab("layers")} title="Camadas"><Icon name="layers" size={18}/></button>
-        <div className="tool-divider"/>
-        <button className="tool-btn" onClick={undo} disabled={!history.length} style={{ opacity: history.length ? 1 : .3 }} title="Desfazer (⌘Z)"><Icon name="undo" size={18}/></button>
-      </div>
 
-      <div className="editor-canvas" ref={stageRef} onClick={() => setSelectedEl(null)}>
-        <div className="editor-canvas-bar">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button className="btn-icon" onClick={onBack} title="Voltar"><Icon name="arrowLeft"/></button>
-            <input
-              className="editor-title-input"
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-            />
-            <span className="editor-bar-meta">1080 × 1350 · {saving ? "salvando…" : "salvo"}</span>
-          </div>
-          <div className="editor-bar-actions">
-            <div className="editor-zoom">
-              <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.05))}>−</button>
-              <span>{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom((z) => Math.min(0.8, z + 0.05))}>+</button>
-            </div>
-            <button className="btn btn-ghost" onClick={handleDownloadZip} disabled={!!exportProgress} title="Baixar todos os slides como ZIP">
-              <Icon name="download"/> {exportProgress || "Baixar fotos (ZIP)"}
-            </button>
-            <button className="btn btn-ghost" onClick={handleSave} disabled={saving}><Icon name="check"/> Salvar</button>
-          </div>
+      {/* ── TOPBAR UNIFICADA ── */}
+      <div className="editor-topbar">
+        <div className="tb-left">
+          <button className="tb-back" onClick={onBack} title="Voltar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+          <input
+            className="tb-title"
+            value={draft.title}
+            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+          />
+          <span className="tb-meta">1080 × 1350 · {saving ? "salvando…" : "salvo"}</span>
         </div>
 
-        <div className="slide-list-bar">
-          {draft.slides.map((s, i) => (
-            <div key={s.id} className={`slide-thumb-mini ${selectedSlide === i ? "selected" : ""}`} onClick={() => setSelectedSlide(i)}>
-              <div className="slide-thumb-mini-num">{i + 1}</div>
-              <SlidePreview slide={s} scale={72 / CANVAS_W} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: 6 }}/>
-            </div>
-          ))}
-          <button className="slide-thumb-mini add-slide-btn" onClick={() => setShowAddSlide(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", borderStyle: "dashed", color: "var(--muted)" }}>
-            <Icon name="plus" size={18}/>
+        <div className="tb-tools">
+          <button className="tool-btn active" title="Selecionar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 2l8 20 2-8 8-2L2 2z"/></svg>
+          </button>
+          <div className="tool-sep"/>
+          <button className="tool-btn" onClick={addText} title="Texto"><Icon name="type" size={15}/></button>
+          <button className="tool-btn" onClick={addImage} title="Imagem"><Icon name="image" size={15}/></button>
+          <button className="tool-btn" onClick={addShape} title="Forma"><Icon name="shapes" size={15}/></button>
+          <button className="tool-btn" onClick={addProfileEl} title="Perfil">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+          <div className="tool-sep"/>
+          <button className="tool-btn" onClick={undo} disabled={!history.length} title="Desfazer (⌘Z)">
+            <Icon name="undo" size={15}/>
           </button>
         </div>
 
-        <div className="editor-stage-wrap" onClick={() => setSelectedEl(null)}>
-          <div className="editor-stage">
-            {draft.slides.map((s, i) => (
-              <SlideCanvas
-                key={s.id}
-                slide={s}
-                index={i}
-                selected={selectedSlide === i}
-                selectedEl={selectedSlide === i ? selectedEl : null}
-                zoom={zoom}
-                isGenerating={generatingSlide === i}
-                generatingProgress={generatingProgress}
-                regenLoading={regenLoading === `${i}-bg`}
-                onSlideClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
-                onElMouseDown={onElMouseDown}
-                onElDblClick={(elId) => { setSelectedSlide(i); setSelectedEl(elId); }}
-                onTextChange={(elId, text) => updateEl(i, elId, { text })}
-                onRegenBg={() => setRegenTarget({ slideIndex: i })}
-              />
-            ))}
-            <button className="slide-frame-add" onClick={(e) => { e.stopPropagation(); setShowAddSlide(true); }} title="Adicionar slide"><Icon name="plus" size={18}/></button>
+        <div className="tb-right">
+          <div className="view-toggle">
+            <button
+              className={`vt-btn ${viewMode === "isolated" ? "active" : ""}`}
+              onClick={() => setViewMode("isolated")}
+              title="Slide isolado"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
+            <button
+              className={`vt-btn ${viewMode === "all" ? "active" : ""}`}
+              onClick={() => setViewMode("all")}
+              title="Todos os slides"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="6" height="12" rx="1"/><rect x="10" y="6" width="6" height="12" rx="1"/><rect x="18" y="6" width="4" height="12" rx="1"/></svg>
+            </button>
           </div>
+          <div className="editor-zoom">
+            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.05))}>−</button>
+            <span>{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom((z) => Math.min(0.8, z + 0.05))}>+</button>
+          </div>
+          <button className="btn btn-ghost" onClick={handleDownloadZip} disabled={!!exportProgress}>
+            <Icon name="download"/> {exportProgress || "Baixar"}
+          </button>
+          <button className="btn btn-ghost" onClick={handleSave} disabled={saving}>
+            <Icon name="check"/> Salvar
+          </button>
         </div>
       </div>
 
+      {/* ── SIDEBAR ESQUERDA ── */}
+      <div className="editor-sidebar">
+        <div className="sl-header">
+          <span className="sl-label">Slides</span>
+          <span className="sl-count">{draft.slides.length}</span>
+        </div>
+        <div className="sl-thumbs">
+          {draft.slides.map((s, i) => (
+            <div
+              key={s.id}
+              className={`slide-thumb-wrap ${selectedSlide === i ? "selected" : ""}`}
+              onClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
+            >
+              <span className="slide-thumb-num">{String(i + 1).padStart(2, "0")}</span>
+              <div className="slide-thumb-frame">
+                <SlidePreview
+                  slide={s}
+                  scale={THUMB_SCALE}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: 6 }}
+                />
+                {generatingSlide === i && (
+                  <div style={{ position: "absolute", inset: 0, background: "rgba(108,39,190,.2)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 5 }}>
+                    <div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite" }}/>
+                  </div>
+                )}
+              </div>
+              <div className="slide-thumb-actions">
+                <button
+                  className="slide-thumb-act"
+                  title="Duplicar"
+                  onClick={(e) => { e.stopPropagation(); duplicateSlide(i); }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button
+                  className="slide-thumb-act danger"
+                  title="Excluir"
+                  onClick={(e) => { e.stopPropagation(); deleteSlide(i); }}
+                  disabled={draft.slides.length === 1}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+          ))}
+          <button className="slide-thumb-add" onClick={() => setShowAddSlide(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Adicionar
+          </button>
+        </div>
+      </div>
+
+      {/* ── CANVAS ── */}
+      <div className="editor-canvas" ref={stageRef} onClick={() => setSelectedEl(null)}>
+
+        {viewMode === "isolated" ? (
+          <div className="editor-canvas-isolated">
+            <div className="editor-canvas-isolated-inner">
+              {slide && (
+                <SlideCanvas
+                  slide={slide}
+                  index={selectedSlide}
+                  selected={true}
+                  selectedEl={selectedEl}
+                  zoom={zoom}
+                  isGenerating={generatingSlide === selectedSlide}
+                  generatingProgress={generatingProgress}
+                  regenLoading={regenLoading === `${selectedSlide}-bg`}
+                  onSlideClick={() => setSelectedEl(null)}
+                  onElMouseDown={onElMouseDown}
+                  onElDblClick={(elId) => setSelectedEl(elId)}
+                  onTextChange={(elId, text) => updateEl(selectedSlide, elId, { text })}
+                  onRegenBg={() => setRegenTarget({ slideIndex: selectedSlide })}
+                />
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="editor-canvas-all">
+            <div className="editor-stage">
+              {draft.slides.map((s, i) => (
+                <SlideCanvas
+                  key={s.id}
+                  slide={s}
+                  index={i}
+                  selected={selectedSlide === i}
+                  selectedEl={selectedSlide === i ? selectedEl : null}
+                  zoom={zoom}
+                  isGenerating={generatingSlide === i}
+                  generatingProgress={generatingProgress}
+                  regenLoading={regenLoading === `${i}-bg`}
+                  onSlideClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
+                  onElMouseDown={onElMouseDown}
+                  onElDblClick={(elId) => { setSelectedSlide(i); setSelectedEl(elId); }}
+                  onTextChange={(elId, text) => updateEl(i, elId, { text })}
+                  onRegenBg={() => setRegenTarget({ slideIndex: i })}
+                />
+              ))}
+              <button
+                className="slide-frame-add"
+                onClick={(e) => { e.stopPropagation(); setShowAddSlide(true); }}
+                title="Adicionar slide"
+              >
+                <Icon name="plus" size={18}/>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── FAB + CHAT FLUTUANTE ── */}
+        <div className="fab-wrap">
+          {chatOpen && (
+            <div className="chat-popup" onClick={(e) => e.stopPropagation()}>
+              <div className="chat-popup-header">
+                <div className="chat-popup-icon">
+                  <MessageCircle size={14}/>
+                </div>
+                <div>
+                  <div className="chat-popup-title">Agente IA</div>
+                  <div className="chat-popup-sub">Edite por texto</div>
+                </div>
+                <button className="chat-popup-close" onClick={() => setChatOpen(false)}>
+                  <X size={11}/>
+                </button>
+              </div>
+
+              <div className="chat-popup-msgs">
+                {chatMsgs.map((m, i) => (
+                  <div key={i} className={`chat-msg ${m.role}`}>
+                    <div className="chat-bubble">{m.content}</div>
+                    {m.actions?.map((a, j) => (
+                      <div key={j} className="chat-action-badge">
+                        <Sparkles size={9}/> {a}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {chatStreaming && (
+                  <div className="chat-msg assistant">
+                    <div className="chat-bubble-streaming">
+                      {chatStreaming}<span className="chat-cursor"/>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef}/>
+              </div>
+
+              <div className="chat-popup-input">
+                <textarea
+                  className="chat-textarea"
+                  placeholder="Ex: mude o título do slide 1..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+                  rows={1}
+                />
+                <button className="chat-send" onClick={sendChat} disabled={chatLoading || !chatInput.trim()}>
+                  <Send size={13}/>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            className="fab-btn"
+            onClick={(e) => { e.stopPropagation(); setChatOpen((o) => !o); }}
+            title="Agente IA"
+          >
+            <MessageCircle size={18}/>
+            <div className="fab-dot"/>
+          </button>
+        </div>
+      </div>
+
+      {/* ── PROPS PANEL ── */}
       <div className="props">
         <div className="props-tabs">
           <button className={`props-tab ${propsTab === "design" ? "active" : ""}`} onClick={() => setPropsTab("design")}>Design</button>
@@ -553,9 +842,13 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           <ProfileProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)}/>
         )}
         {propsTab === "design" && !el && slide && (
-          <SlidePropsPanel slide={slide} idx={selectedSlide} totalSlides={draft.slides.length}
+          <SlidePropsPanel
+            slide={slide}
+            idx={selectedSlide}
+            totalSlides={draft.slides.length}
             onDuplicate={() => duplicateSlide(selectedSlide)}
-            onDelete={() => deleteSlide(selectedSlide)}/>
+            onDelete={() => deleteSlide(selectedSlide)}
+          />
         )}
         {propsTab === "background" && slide && (
           <BackgroundPropsPanel
@@ -570,10 +863,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
       </div>
 
       {regenTarget && (
-        <RegenImageModal
-          onClose={() => setRegenTarget(null)}
-          onConfirm={handleRegenImage}
-        />
+        <RegenImageModal onClose={() => setRegenTarget(null)} onConfirm={handleRegenImage}/>
       )}
 
       {showAddSlide && (
@@ -595,6 +885,8 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     </div>
   );
 }
+
+// ── SlideCanvas — sem mudança ─────────────────────────────────────────────────
 
 interface SlideCanvasProps {
   slide: ISlide;
@@ -631,7 +923,6 @@ function SlideCanvas({ slide, index, selected, selectedEl, zoom, isGenerating, g
               pointerEvents: "none",
             }}/>
           )}
-
           <div data-elements-container style={{ position: "absolute", top: 0, left: 0, width: CANVAS_W, height: CANVAS_H, transform: `scale(${zoom})`, transformOrigin: "top left", zIndex: 2 }}>
             {(slide.elements || []).map((elItem) => (
               <EditableElement
@@ -648,15 +939,15 @@ function SlideCanvas({ slide, index, selected, selectedEl, zoom, isGenerating, g
       </div>
 
       {isGenerating && (
-        <div style={{ padding: "8px 12px", background: "rgba(108,39,190,0.1)", borderRadius: 8, border: "1px solid rgba(168,85,247,0.3)", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ padding: "8px 12px", background: "rgba(108,39,190,.1)", borderRadius: 8, border: "1px solid rgba(168,85,247,.3)", display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--txt)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite", flexShrink: 0 }}/>
+              <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite", flexShrink: 0 }}/>
               Gerando fundo com IA...
             </div>
             <span>{generatingProgress}%</span>
           </div>
-          <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+          <div style={{ height: 4, borderRadius: 2, background: "rgba(255,255,255,.1)", overflow: "hidden" }}>
             <div style={{ height: "100%", borderRadius: 2, background: "#A855F7", width: `${generatingProgress}%`, transition: "width 0.3s ease" }}/>
           </div>
         </div>
@@ -674,7 +965,7 @@ function SlideCanvas({ slide, index, selected, selectedEl, zoom, isGenerating, g
           }}
         >
           {regenLoading ? (
-            <><div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite" }}/> Gerando…</>
+            <><div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite" }}/> Gerando…</>
           ) : (
             <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             {slide.bgImageUrl ? "Gerar outra imagem" : "Gerar imagem de fundo"}</>
@@ -684,6 +975,8 @@ function SlideCanvas({ slide, index, selected, selectedEl, zoom, isGenerating, g
     </div>
   );
 }
+
+// ── EditableElement — sem mudança ─────────────────────────────────────────────
 
 interface EditableElementProps {
   el: IElement;
@@ -756,7 +1049,7 @@ function EditableElement({ el, selected, onMouseDown, onDblClick, onTextChange }
         {finalUrl ? (
           <img src={finalUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
         ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.2)", fontSize: 14, gap: 6 }}>
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.2)", fontSize: 14, gap: 6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             Sem imagem
           </div>
@@ -775,17 +1068,17 @@ function EditableElement({ el, selected, onMouseDown, onDblClick, onTextChange }
         onClick={(e) => e.stopPropagation()}
       >
         {el.photoUrl ? (
-          <div style={{ width: el.h, height: el.h, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: el.h, height: el.h, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "2px solid rgba(255,255,255,.3)" }}>
             <img src={el.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
           </div>
         ) : (
-          <div style={{ width: el.h, height: el.h, borderRadius: "50%", background: "rgba(255,255,255,0.12)", flexShrink: 0, border: "2px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width={el.h * 0.5} height={el.h * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
+          <div style={{ width: el.h, height: el.h, borderRadius: "50%", background: "rgba(255,255,255,.12)", flexShrink: 0, border: "2px solid rgba(255,255,255,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width={el.h * 0.5} height={el.h * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="2" strokeLinecap="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
         )}
-        <span style={{ fontSize: el.fontSize || 26, fontWeight: el.weight || 600, color: el.color || "rgba(255,255,255,0.75)", fontFamily: `'${el.font || "Space Grotesk"}', sans-serif`, letterSpacing: "-0.01em" }}>
+        <span style={{ fontSize: el.fontSize || 26, fontWeight: el.weight || 600, color: el.color || "rgba(255,255,255,.75)", fontFamily: `'${el.font || "Space Grotesk"}', sans-serif`, letterSpacing: "-0.01em" }}>
           {el.text}
         </span>
         {selected && <ResizeHandles/>}
