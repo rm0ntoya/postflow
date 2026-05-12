@@ -160,7 +160,11 @@ function buildCanvasSlides(
         els.push({ id: `${cid}-s${i}-box-a`, type: "shape", shape: "rect", x: 40, y: 380, w: W-80, h: 340, color: "#ef4444", opacity: 0.08, radius: 16 });
         els.push({ id: `${cid}-s${i}-box-a-border`, type: "shape", shape: "rect", x: 40, y: 380, w: 4, h: 340, color: "#ef4444", opacity: 0.6, radius: 2 });
         els.push({ id: `${cid}-s${i}-lbl-a`, type: "text", text: "❌  ANTES", x: 70, y: 405, w: 300, h: 50, fontSize: 26, weight: 700, color: "#ef4444", font: SG, align: "left" });
-        els.push({ id: `${cid}-s${i}-txt-a`, type: "text", text: gs.body.split(/\n|\./).slice(0, 3).join(". ").slice(0, 200), x: 70, y: 460, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
+        const _sentences8 = gs.body.split(/(?<=[.!?])\s+|\n/).map((s: string) => s.trim()).filter(Boolean);
+        const _half8 = Math.ceil(_sentences8.length / 2);
+        const _txtA8 = (_sentences8.slice(0, _half8).join(" ") || gs.body.slice(0, Math.floor(gs.body.length / 2))).slice(0, 220);
+        const _txtB8 = (_sentences8.slice(_half8).join(" ") || gs.body.slice(Math.floor(gs.body.length / 2))).slice(0, 220);
+        els.push({ id: `${cid}-s${i}-txt-a`, type: "text", text: _txtA8, x: 70, y: 460, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
         // VS separator
         els.push({ id: `${cid}-s${i}-vs`, type: "shape", shape: "circle", x: W/2-28, y: 704, w: 56, h: 56, color: "#1a1a1a", opacity: 1 });
         els.push({ id: `${cid}-s${i}-vs-txt`, type: "text", text: "VS", x: W/2-28, y: 708, w: 56, h: 48, fontSize: 18, weight: 900, color: "rgba(255,255,255,0.5)", font: SG, align: "center" });
@@ -168,7 +172,7 @@ function buildCanvasSlides(
         els.push({ id: `${cid}-s${i}-box-b`, type: "shape", shape: "rect", x: 40, y: 780, w: W-80, h: 340, color: "#22c55e", opacity: 0.08, radius: 16 });
         els.push({ id: `${cid}-s${i}-box-b-border`, type: "shape", shape: "rect", x: 40, y: 780, w: 4, h: 340, color: "#22c55e", opacity: 0.7, radius: 2 });
         els.push({ id: `${cid}-s${i}-lbl-b`, type: "text", text: "✓  DEPOIS", x: 70, y: 805, w: 300, h: 50, fontSize: 26, weight: 700, color: "#22c55e", font: SG, align: "left" });
-        els.push({ id: `${cid}-s${i}-txt-b`, type: "text", text: gs.body.split(/\n|\./).slice(3).join(". ").slice(0, 200) || gs.body.slice(0, 200), x: 70, y: 860, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
+        els.push({ id: `${cid}-s${i}-txt-b`, type: "text", text: _txtB8, x: 70, y: 860, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
 
       } else if (tpl === 9) {
         // Vertical timeline with 3 numbered steps
@@ -184,7 +188,7 @@ function buildCanvasSlides(
         for (let s = 0; s < 3; s++) {
           els.push({ id: `${cid}-s${i}-sc${s}`, type: "shape", shape: "circle", x: 62, y: stepYs[s], w: 72, h: 72, color: accentColor, opacity: stepOpacities[s] });
           els.push({ id: `${cid}-s${i}-sn${s}`, type: "text", text: String(s + 1), x: 62, y: stepYs[s]+4, w: 72, h: 64, fontSize: 28, weight: 900, color: "#000000", font: TBF, align: "center" });
-          els.push({ id: `${cid}-s${i}-st${s}`, type: "text", text: bodyLines[s] || gs.body.slice(s * 80, (s + 1) * 80), x: 160, y: stepYs[s]+4, w: W-220, h: 60, fontSize: 34, weight: 600, color: "#FFFFFF", font: SG, align: "left" });
+          els.push({ id: `${cid}-s${i}-st${s}`, type: "text", text: bodyLines[s] || gs.body.slice(s * 80, (s + 1) * 80) || "—", x: 160, y: stepYs[s]+4, w: W-220, h: 60, fontSize: 34, weight: 600, color: "#FFFFFF", font: SG, align: "left" });
           if (bodyLines[s + 3]) els.push({ id: `${cid}-s${i}-sd${s}`, type: "text", text: bodyLines[s + 3], x: 160, y: stepYs[s]+52, w: W-220, h: 50, fontSize: 28, weight: 400, color: "#A0A0A0", font: SG, align: "left" });
         }
 
