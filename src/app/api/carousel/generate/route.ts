@@ -316,7 +316,7 @@ function buildCanvasSlides(
       els.push({ id: `${cid}-s${i}-img2`, type: "image", imagePrompt: gs.imagePrompt2 || gs.imagePrompt, x: 548, y: 120, w: 492, h: 480, radius: 20 });
       els.push({ id: `${cid}-s${i}-img3`, type: "image", imagePrompt: gs.imagePrompt, x: 548, y: 620, w: 492, h: 500, radius: 20 });
       els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: 40, y: 1140, w: W-80, h: 3, color: accentColor, opacity: 0.5, radius: 2 });
-      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 40, y: 1160, w: W-80, h: 140, fontSize: 76, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 40, y: 1145, w: W-80, h: 120, fontSize: 76, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
 
     } else if (imgTpl === 13) {
       // Full-bleed bg + frosted card overlay with title/body centered
