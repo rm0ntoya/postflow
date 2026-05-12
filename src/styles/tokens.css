@@ -1,0 +1,408 @@
+/* ============================================================================
+   NOVACRAFT DESIGN SYSTEM — TOKEN DEFINITIONS
+
+   Source: DESIGN.md § 2 (Identidade Visual)
+   Date: 2026-05-12
+   Version: 1.0
+
+   Single source of truth for all design tokens. Used by Tailwind config and
+   components via CSS custom properties. No hardcoded hex values in components.
+   ============================================================================ */
+
+:root {
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.1 PALETA — Background (preto editorial, 4 níveis)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --bg-base: #0a0a0b;           /* fundo da app, body */
+  --bg-surface: #111113;        /* cards, sidebar, modal background */
+  --bg-surface-2: #16161a;      /* hover de card, input, dropdown */
+  --bg-surface-3: #1c1c21;      /* nested (modal dentro de modal, popover) */
+  --bg-overlay: rgba(10, 10, 11, 0.72);  /* backdrop de modal */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.1 PALETA — Borda (translúcidas — empilham bem)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --border-subtle: rgba(255, 255, 255, 0.06);    /* divisores, cards */
+  --border-default: rgba(255, 255, 255, 0.10);   /* inputs, botões secundários */
+  --border-strong: rgba(255, 255, 255, 0.16);    /* hover de input, foco */
+  --border-accent: #c6f84e;                      /* foco de input + CTA primário border */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.1 PALETA — Texto (escala de 5 — não use mais)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --text-primary: #f5f5f7;      /* títulos, body principal */
+  --text-secondary: #a1a1aa;    /* descrições, labels */
+  --text-tertiary: #6b6b72;     /* placeholders, metadados */
+  --text-disabled: #3f3f45;     /* desabilitado */
+  --text-inverse: #0a0a0b;      /* texto sobre acento verde */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.1 PALETA — Acento (verde-limão — único)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --accent: #c6f84e;                              /* primário — CTA, foco, indicadores ativos */
+  --accent-hover: #b5e84a;                        /* hover de CTA */
+  --accent-pressed: #9fd63d;                      /* active/pressed */
+  --accent-muted: rgba(198, 248, 78, 0.12);      /* background de chip ativo */
+  --accent-glow: rgba(198, 248, 78, 0.32);       /* ring de foco, glow sutil */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.1 PALETA — Estados (acromáticos — comunicação por ícone + label)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --state-success: #7bd46c;     /* só usado em ícones e barras de progresso de sucesso */
+  --state-warning: #e8c547;     /* aviso */
+  --state-danger: #e8625a;      /* erro, perigo */
+  --state-info: var(--text-secondary);  /* info usa cinza, não azul */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.2 TIPOGRAFIA — Escala fechada (8 tamanhos)
+
+     Formato: --font-{nome}-(size|line|weight|tracking)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --font-display-size: 40px;
+  --font-display-line: 44px;
+  --font-display-weight: 600;
+  --font-display-tracking: -0.02em;
+
+  --font-h1-size: 28px;
+  --font-h1-line: 34px;
+  --font-h1-weight: 600;
+  --font-h1-tracking: -0.015em;
+
+  --font-h2-size: 20px;
+  --font-h2-line: 26px;
+  --font-h2-weight: 600;
+  --font-h2-tracking: -0.01em;
+
+  --font-h3-size: 16px;
+  --font-h3-line: 22px;
+  --font-h3-weight: 600;
+  --font-h3-tracking: -0.005em;
+
+  --font-body-size: 14px;
+  --font-body-line: 20px;
+  --font-body-weight: 400;
+  --font-body-tracking: 0;
+
+  --font-body-strong-size: 14px;
+  --font-body-strong-line: 20px;
+  --font-body-strong-weight: 500;
+  --font-body-strong-tracking: 0;
+
+  --font-caption-size: 12px;
+  --font-caption-line: 16px;
+  --font-caption-weight: 500;
+  --font-caption-tracking: 0.01em;
+
+  --font-micro-size: 11px;
+  --font-micro-line: 14px;
+  --font-micro-weight: 600;
+  --font-micro-tracking: 0.06em;
+  --font-micro-transform: uppercase;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.3 ESPAÇAMENTO — escala 4px
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.4 RAIO DE BORDA
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --radius-xs: 4px;       /* chips, badges */
+  --radius-sm: 6px;       /* botões, inputs */
+  --radius-md: 8px;       /* cards pequenos, dropdowns */
+  --radius-lg: 12px;      /* cards grandes, modais */
+  --radius-xl: 16px;      /* hero cards, painel notícia */
+  --radius-pill: 999px;   /* avatar, pills de status */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.5 SOMBRAS — proibidas (com 1 exceção)
+
+     Profundidade vem de stacking translúcido + bordas, não shadow.
+     Única exceção: modal/popover flutuante.
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.6 MOTION — Easings e durações tokenizadas
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);    /* padrão de entrada */
+  --ease-in: cubic-bezier(0.4, 0, 0.84, 0);      /* saída */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* uso raro: chip ativo */
+
+  --dur-fast: 120ms;      /* hover, focus ring */
+  --dur-base: 180ms;      /* abertura de dropdown, fade */
+  --dur-slow: 280ms;      /* abertura de modal, slide de painel */
+  --dur-page: 420ms;      /* transição entre rotas (apenas em onboarding) */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     2.7 ICONOGRAFIA — Tamanhos fixos por contexto
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --icon-sm: 14px;        /* inline body */
+  --icon-md: 16px;        /* botão */
+  --icon-lg: 18px;        /* sidebar */
+  --icon-xl: 20px;        /* header */
+  --icon-xxl: 24px;       /* estado vazio */
+
+  --icon-stroke-width: 1.5;  /* padrão para todos ícones */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     BUTTON — Tamanhos
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --button-sm-height: 28px;
+  --button-sm-padding: 0 12px;
+  --button-sm-font-size: 13px;
+  --button-sm-gap: 6px;
+
+  --button-md-height: 36px;
+  --button-md-padding: 0 16px;
+  --button-md-font-size: 14px;
+  --button-md-gap: 8px;
+
+  --button-lg-height: 44px;
+  --button-lg-padding: 0 20px;
+  --button-lg-font-size: 15px;
+  --button-lg-gap: 8px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     INPUT — Padrão
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --input-md-height: 36px;
+  --input-lg-height: 44px;
+  --input-padding-x: 12px;
+  --input-font-size: 14px;
+  --input-focus-ring-size: 3px;
+  --input-border-radius: var(--radius-sm);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CARD — Padrão
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --card-padding-dense: var(--space-4);     /* 16px */
+  --card-padding-spacious: var(--space-6);  /* 24px */
+  --card-border-radius: var(--radius-lg);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     MODAL — Tamanhos
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --modal-sm-width: 400px;
+  --modal-md-width: 560px;
+  --modal-lg-width: 720px;
+  --modal-xl-width: 920px;
+
+  --modal-padding-header: var(--space-6);    /* 24px */
+  --modal-padding-body: var(--space-6);      /* 24px */
+  --modal-padding-footer: 16px var(--space-6);  /* 16px 24px */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SIDEBAR — Layout
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --sidebar-collapsed-width: 56px;
+  --sidebar-expanded-width: 240px;
+  --sidebar-transition-duration: var(--dur-base);
+
+  --sidebar-item-height: 36px;
+  --sidebar-item-padding: 0 10px;
+  --sidebar-item-gap: 10px;
+  --sidebar-icon-size: var(--icon-lg);
+
+  --sidebar-button-size: 40px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     TOPBAR — Layout
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --topbar-height: 48px;
+  --topbar-search-width: 360px;
+  --topbar-search-height: 32px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CHIP / BADGE — Padrão
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --chip-padding: 4px 10px;
+  --chip-font-size: var(--font-caption-size);
+  --chip-border-radius: var(--radius-xs);
+
+  --badge-dot-size: 6px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     TOAST — Layout
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --toast-padding: 12px 16px;
+  --toast-min-width: 280px;
+  --toast-max-width: 480px;
+  --toast-border-radius: var(--radius-md);
+  --toast-icon-size: var(--icon-md);
+  --toast-auto-dismiss: 3.5s;
+  --toast-max-stack: 3;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     COMMAND PALETTE — Layout
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --command-palette-width: 640px;
+  --command-palette-max-height: 560px;
+  --command-palette-input-height: 48px;
+  --command-palette-input-font-size: 16px;
+  --command-palette-footer-height: 32px;
+  --command-palette-top-offset: 24%;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     HERO STRIP — Dashboard Home
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --hero-height: 96px;
+  --hero-padding-x: var(--space-6);
+  --hero-padding-y: var(--space-5);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     TOOLBAR — Dashboard Home
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --toolbar-height: 52px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     GRID — Carousel Cards (Dashboard)
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --grid-gap: 16px;
+  --carousel-card-aspect-ratio: 4 / 5;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     MODAL ENTRADA — Animação
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --modal-scale-from: 0.96;
+  --modal-scale-to: 1;
+  --modal-enter-duration: var(--dur-base);
+  --modal-enter-easing: var(--ease-out);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SKELETON — Animação
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --skeleton-shimmer-duration: 1.6s;
+  --skeleton-shimmer-easing: linear;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     REDUCED MOTION — Acessibilidade
+     ───────────────────────────────────────────────────────────────────────── */
+
+  --motion-safe-duration: var(--dur-base);
+  --motion-reduced-duration: 0.01ms;
+  --motion-reduced-opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION SUPPORT — Desabilitar animações para usuários sensíveis
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0.01ms;
+    --dur-base: 0.01ms;
+    --dur-slow: 0.01ms;
+    --dur-page: 0.01ms;
+    --skeleton-shimmer-duration: 0.01ms;
+    --modal-enter-duration: 0.01ms;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   UTILITY CLASSES — Aplicações comuns dos tokens
+   ───────────────────────────────────────────────────────────────────────── */
+
+.text-display {
+  font-size: var(--font-display-size);
+  line-height: var(--font-display-line);
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--font-display-tracking);
+}
+
+.text-h1 {
+  font-size: var(--font-h1-size);
+  line-height: var(--font-h1-line);
+  font-weight: var(--font-h1-weight);
+  letter-spacing: var(--font-h1-tracking);
+}
+
+.text-h2 {
+  font-size: var(--font-h2-size);
+  line-height: var(--font-h2-line);
+  font-weight: var(--font-h2-weight);
+  letter-spacing: var(--font-h2-tracking);
+}
+
+.text-h3 {
+  font-size: var(--font-h3-size);
+  line-height: var(--font-h3-line);
+  font-weight: var(--font-h3-weight);
+  letter-spacing: var(--font-h3-tracking);
+}
+
+.text-body {
+  font-size: var(--font-body-size);
+  line-height: var(--font-body-line);
+  font-weight: var(--font-body-weight);
+  letter-spacing: var(--font-body-tracking);
+}
+
+.text-body-strong {
+  font-size: var(--font-body-strong-size);
+  line-height: var(--font-body-strong-line);
+  font-weight: var(--font-body-strong-weight);
+  letter-spacing: var(--font-body-strong-tracking);
+}
+
+.text-caption {
+  font-size: var(--font-caption-size);
+  line-height: var(--font-caption-line);
+  font-weight: var(--font-caption-weight);
+  letter-spacing: var(--font-caption-tracking);
+}
+
+.text-micro {
+  font-size: var(--font-micro-size);
+  line-height: var(--font-micro-line);
+  font-weight: var(--font-micro-weight);
+  letter-spacing: var(--font-micro-tracking);
+  text-transform: var(--font-micro-transform);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FIM — TOKENS CSS
+   ───────────────────────────────────────────────────────────────────────── */
