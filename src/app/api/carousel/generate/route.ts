@@ -218,7 +218,7 @@ function buildCanvasSlides(
     let imgTpl: number;
     if (isFirst) imgTpl = 0;
     else if (isLast) imgTpl = 1;
-    else imgTpl = 2 + (i % 8); // templates 2–9 for middle image slides
+    else imgTpl = 2 + (i % 13); // templates 2–14 for middle image slides
 
     if (imgTpl === 0 || imgTpl === 1) {
       // Cover / CTA: text bottom over full-bleed background image
@@ -282,13 +282,62 @@ function buildCanvasSlides(
       els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 80, y: 860, w: W-160, h: 160, fontSize: 30, weight: 500, color: "#D0D0D0", font: SG, align: "center", lineHeight: 1.45 });
       els.push({ id: `${cid}-s${i}-img3`, type: "image", imagePrompt: gs.imagePrompt, x: 60, y: 1050, w: W-120, h: 210, radius: 20 });
 
-    } else {
+    } else if (imgTpl === 9) {
       // imgTpl === 9: Text overlay top + wide image bottom (large)
       addProfile(80);
       els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 190, w: W-120, h: 280, fontSize: 102, weight: 900, color: "#FFFFFF", font: TBF, align: "left", lineHeight: 0.92 });
       els.push({ id: `${cid}-s${i}-accent`, type: "shape", shape: "rect", x: 60, y: 490, w: 60, h: 6, color: accentColor, opacity: 1, radius: 3 });
       els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 60, y: 520, w: W-120, h: 200, fontSize: 34, weight: 500, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.45 });
       els.push({ id: `${cid}-s${i}-img1`, type: "image", imagePrompt: gs.imagePrompt, x: 60, y: 780, w: W-120, h: 480, radius: 24 });
+
+    } else if (imgTpl === 10) {
+      // Circular portrait image centered top + title/body below
+      els.push({ id: `${cid}-s${i}-ring`, type: "shape", shape: "circle", x: 160, y: 50, w: 760, h: 760, color: accentColor, opacity: 0.18 });
+      els.push({ id: `${cid}-s${i}-img1`, type: "image", imagePrompt: gs.imagePrompt, x: 190, y: 80, w: 700, h: 700, radius: 350 });
+      els.push({ id: `${cid}-s${i}-dot`, type: "shape", shape: "circle", x: W/2-12, y: 36, w: 24, h: 24, color: accentColor, opacity: 1 });
+      addProfile(848);
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 940, w: W-120, h: 260, fontSize: 96, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-60, y: 1092, w: 120, h: 5, color: accentColor, radius: 3, opacity: 1 });
+      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 100, y: 1112, w: W-200, h: 180, fontSize: 34, weight: 500, color: "#D0D0D0", font: SG, align: "center", lineHeight: 1.4 });
+
+    } else if (imgTpl === 11) {
+      // Full-bleed bg image + diagonal accent faixa + text bottom
+      // bgImageUrl set via imagePrompt at slide level (handled in return)
+      els.push({ id: `${cid}-s${i}-faixa`, type: "shape", shape: "rect", x: 0, y: 576, w: W, h: 10, color: accentColor, opacity: 0.75, radius: 0 });
+      els.push({ id: `${cid}-s${i}-overlay`, type: "shape", shape: "rect", x: 0, y: 586, w: W, h: H-586, color: "rgba(0,0,0,0.72)", opacity: 1, radius: 0 });
+      addProfile(640);
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 730, w: W-120, h: 280, fontSize: 104, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 100, y: 1024, w: W-200, h: 220, fontSize: 36, weight: 500, color: "#E0E0E0", font: SG, align: "center", lineHeight: 1.4 });
+
+    } else if (imgTpl === 12) {
+      // 3-image mosaic: 1 tall left + 2 stacked right
+      addProfile(44);
+      els.push({ id: `${cid}-s${i}-img1`, type: "image", imagePrompt: gs.imagePrompt, x: 40, y: 120, w: 468, h: 1000, radius: 20 });
+      els.push({ id: `${cid}-s${i}-img2`, type: "image", imagePrompt: gs.imagePrompt2 || gs.imagePrompt, x: 548, y: 120, w: 492, h: 480, radius: 20 });
+      els.push({ id: `${cid}-s${i}-img3`, type: "image", imagePrompt: gs.imagePrompt, x: 548, y: 620, w: 492, h: 500, radius: 20 });
+      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: 40, y: 1140, w: W-80, h: 3, color: accentColor, opacity: 0.5, radius: 2 });
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 40, y: 1160, w: W-80, h: 140, fontSize: 76, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+
+    } else if (imgTpl === 13) {
+      // Full-bleed bg + frosted card overlay with title/body centered
+      // bgImageUrl set via imagePrompt at slide level (handled in return)
+      els.push({ id: `${cid}-s${i}-card`, type: "shape", shape: "rect", x: 60, y: 270, w: 960, h: 680, color: "rgba(0,0,0,0.65)", opacity: 1, radius: 20 });
+      els.push({ id: `${cid}-s${i}-cardtop`, type: "shape", shape: "rect", x: 60, y: 270, w: 220, h: 5, color: accentColor, opacity: 1, radius: 3 });
+      addProfile(320, 100, 500);
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 100, y: 420, w: 880, h: 300, fontSize: 106, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.9 });
+      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-50, y: 740, w: 100, h: 4, color: accentColor, radius: 2, opacity: 1 });
+      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 120, y: 760, w: 840, h: 160, fontSize: 34, weight: 500, color: "#EAEAEA", font: SG, align: "center", lineHeight: 1.4 });
+
+    } else if (imgTpl === 14) {
+      // Title + body top + panoramic 3-image strip bottom
+      addProfile(60);
+      els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 160, w: W-120, h: 260, fontSize: 100, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.92 });
+      els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-60, y: 430, w: 120, h: 4, color: accentColor, radius: 2, opacity: 1 });
+      els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 100, y: 450, w: W-200, h: 140, fontSize: 34, weight: 500, color: "#D0D0D0", font: SG, align: "center", lineHeight: 1.4 });
+      els.push({ id: `${cid}-s${i}-img1`, type: "image", imagePrompt: gs.imagePrompt, x: 40, y: 610, w: 316, h: 400, radius: 16 });
+      els.push({ id: `${cid}-s${i}-img2`, type: "image", imagePrompt: gs.imagePrompt2 || gs.imagePrompt, x: 382, y: 610, w: 316, h: 400, radius: 16 });
+      els.push({ id: `${cid}-s${i}-img3`, type: "image", imagePrompt: gs.imagePrompt, x: 724, y: 610, w: 316, h: 400, radius: 16 });
+      els.push({ id: `${cid}-s${i}-accrule`, type: "shape", shape: "rect", x: 40, y: 1028, w: W-80, h: 3, color: accentColor, opacity: 0.35, radius: 2 });
     }
 
     addPageNum();
@@ -296,9 +345,9 @@ function buildCanvasSlides(
     return {
       id: `${cid}-s${i}`,
       bgKey: "noir",
-      bgOverride: (imgTpl === 0 || imgTpl === 1) ? undefined : "#000000",
+      bgOverride: (imgTpl === 0 || imgTpl === 1 || imgTpl === 11 || imgTpl === 13) ? undefined : "#000000",
       bgImageUrl: undefined,
-      imagePrompt: (imgTpl === 0 || imgTpl === 1) ? gs.imagePrompt : undefined,
+      imagePrompt: (imgTpl === 0 || imgTpl === 1 || imgTpl === 11 || imgTpl === 13) ? gs.imagePrompt : undefined,
       elements: els,
     };
   });
