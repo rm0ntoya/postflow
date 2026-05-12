@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import Carousel, { IElement, ISegment, ISlide } from "@/models/Carousel";
+import Carousel, { IElement, ISlide } from "@/models/Carousel";
 import { getSessionUser } from "@/lib/auth";
 import { decryptApiKey } from "@/lib/encryption";
+import { CANVAS_W, CANVAS_H, parseSegments } from "@/lib/canvas";
 
 export const maxDuration = 60;
 
 const GEMINI_MODEL = "gemini-2.0-flash";
-const CANVAS_W = 1080;
-const CANVAS_H = 1350;
 
 interface GeminiSlide {
   slideNumber: number;
@@ -18,20 +17,6 @@ interface GeminiSlide {
   body: string;
   imagePrompt: string;
   imagePrompt2?: string;
-}
-
-function parseSegments(title: string, accentColor: string): ISegment[] {
-  const segments: ISegment[] = [];
-  const parts = title.split(/(\*\*[^*]+\*\*)/g);
-  for (const part of parts) {
-    if (!part) continue;
-    if (part.startsWith("**") && part.endsWith("**")) {
-      segments.push({ text: part.slice(2, -2).toUpperCase(), color: accentColor });
-    } else {
-      segments.push({ text: part.toUpperCase(), color: "#FFFFFF" });
-    }
-  }
-  return segments.length > 0 ? segments : [{ text: title.toUpperCase(), color: "#FFFFFF" }];
 }
 
 function buildCanvasSlides(
@@ -80,7 +65,7 @@ function buildCanvasSlides(
     // ─── TEXT-ONLY SLIDES ──────────────────────────────────────────────────────
     // All centered, big TheBoldFont titles, more body content
     if (!hasImage && !isFirst && !isLast) {
-      const tpl = textSlideCount % 6;
+      const tpl = textSlideCount % 11;
       textSlideCount++;
 
       if (tpl === 0) {
@@ -131,7 +116,7 @@ function buildCanvasSlides(
         els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: 60, y: 730, w: W-120, h: 2, color: "#fff", opacity: 0.1, radius: 1 });
         els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 70, y: 770, w: W-140, h: 460, fontSize: 42, weight: 400, color: "#C2C2C2", font: SG, align: "center", lineHeight: 1.65 });
 
-      } else {
+      } else if (tpl === 5) {
         // tpl === 5: Minimal center with accent circles decorating corners
         els.push({ id: `${cid}-s${i}-tl`, type: "shape", shape: "circle", x: -120, y: -120, w: 340, h: 340, color: accentColor, opacity: 0.08 });
         els.push({ id: `${cid}-s${i}-br`, type: "shape", shape: "circle", x: W-220, y: H-220, w: 340, h: 340, color: accentColor, opacity: 0.08 });
@@ -141,6 +126,77 @@ function buildCanvasSlides(
         els.push({ id: `${cid}-s${i}-dots2`, type: "shape", shape: "circle", x: W/2-14, y: H/2+130, w: 10, h: 10, color: accentColor, opacity: 0.5 });
         els.push({ id: `${cid}-s${i}-dots3`, type: "shape", shape: "circle", x: W/2+12, y: H/2+130, w: 10, h: 10, color: accentColor, opacity: 0.25 });
         els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 80, y: H/2+170, w: W-160, h: 480, fontSize: 42, weight: 400, color: "#BEBEBE", font: SG, align: "center", lineHeight: 1.6 });
+
+      } else if (tpl === 6) {
+        // Two-column stat: huge title left, body right
+        els.push({ id: `${cid}-s${i}-c1`, type: "shape", shape: "circle", x: -150, y: 200, w: 500, h: 500, color: accentColor, opacity: 0.06 });
+        els.push({ id: `${cid}-s${i}-c2`, type: "shape", shape: "circle", x: W-100, y: H-600, w: 500, h: 500, color: accentColor, opacity: 0.04 });
+        els.push({ id: `${cid}-s${i}-vdiv`, type: "shape", shape: "rect", x: 520, y: 100, w: 2, h: H-200, color: "#ffffff", opacity: 0.07, radius: 1 });
+        addProfile(80, 60, 420);
+        els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 50, y: 200, w: 440, h: 620, fontSize: 148, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.88 });
+        els.push({ id: `${cid}-s${i}-dot`, type: "shape", shape: "circle", x: 210, y: 872, w: 16, h: 16, color: accentColor, opacity: 1 });
+        els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: 80, y: 890, w: 300, h: 4, color: accentColor, radius: 2, opacity: 0.7 });
+        els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 560, y: 160, w: 460, h: 960, fontSize: 40, weight: 400, color: "#CCCCCC", font: SG, align: "left", lineHeight: 1.65 });
+
+      } else if (tpl === 7) {
+        // Decorative checklist: title + accent bullets left-margin + body
+        els.push({ id: `${cid}-s${i}-c1`, type: "shape", shape: "circle", x: W-300, y: -100, w: 600, h: 600, color: accentColor, opacity: 0.05 });
+        addProfile(70);
+        els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 170, w: W-120, h: 240, fontSize: 92, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.9 });
+        els.push({ id: `${cid}-s${i}-rule`, type: "shape", shape: "rect", x: W/2-80, y: 420, w: 160, h: 4, color: accentColor, radius: 2, opacity: 1 });
+        const bulletYs = [460, 610, 760, 910];
+        const bulletOpacities = [1, 0.8, 0.6, 0.4];
+        for (let b = 0; b < 4; b++) {
+          els.push({ id: `${cid}-s${i}-bx${b}`, type: "shape", shape: "rect", x: 60, y: bulletYs[b], w: 36, h: 36, color: accentColor, radius: 6, opacity: bulletOpacities[b] });
+          if (b < 3) els.push({ id: `${cid}-s${i}-sep${b}`, type: "shape", shape: "rect", x: 60, y: bulletYs[b]+52, w: W-120, h: 1.5, color: "#ffffff", opacity: 0.06, radius: 1 });
+        }
+        els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 120, y: 446, w: W-180, h: 580, fontSize: 36, weight: 500, color: "#D0D0D0", font: SG, align: "left", lineHeight: 1.72 });
+
+      } else if (tpl === 8) {
+        // Before/After: two stacked contrast boxes
+        addProfile(60);
+        els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 160, w: W-120, h: 200, fontSize: 88, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.9 });
+        // BEFORE box
+        els.push({ id: `${cid}-s${i}-box-a`, type: "shape", shape: "rect", x: 40, y: 380, w: W-80, h: 340, color: "#ef4444", opacity: 0.08, radius: 16 });
+        els.push({ id: `${cid}-s${i}-box-a-border`, type: "shape", shape: "rect", x: 40, y: 380, w: 4, h: 340, color: "#ef4444", opacity: 0.6, radius: 2 });
+        els.push({ id: `${cid}-s${i}-lbl-a`, type: "text", text: "❌  ANTES", x: 70, y: 405, w: 300, h: 50, fontSize: 26, weight: 700, color: "#ef4444", font: SG, align: "left" });
+        els.push({ id: `${cid}-s${i}-txt-a`, type: "text", text: gs.body.split(/\n|\./).slice(0, 3).join(". ").slice(0, 200), x: 70, y: 460, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
+        // VS separator
+        els.push({ id: `${cid}-s${i}-vs`, type: "shape", shape: "circle", x: W/2-28, y: 704, w: 56, h: 56, color: "#1a1a1a", opacity: 1 });
+        els.push({ id: `${cid}-s${i}-vs-txt`, type: "text", text: "VS", x: W/2-28, y: 708, w: 56, h: 48, fontSize: 18, weight: 900, color: "rgba(255,255,255,0.5)", font: SG, align: "center" });
+        // AFTER box
+        els.push({ id: `${cid}-s${i}-box-b`, type: "shape", shape: "rect", x: 40, y: 780, w: W-80, h: 340, color: "#22c55e", opacity: 0.08, radius: 16 });
+        els.push({ id: `${cid}-s${i}-box-b-border`, type: "shape", shape: "rect", x: 40, y: 780, w: 4, h: 340, color: "#22c55e", opacity: 0.7, radius: 2 });
+        els.push({ id: `${cid}-s${i}-lbl-b`, type: "text", text: "✓  DEPOIS", x: 70, y: 805, w: 300, h: 50, fontSize: 26, weight: 700, color: "#22c55e", font: SG, align: "left" });
+        els.push({ id: `${cid}-s${i}-txt-b`, type: "text", text: gs.body.split(/\n|\./).slice(3).join(". ").slice(0, 200) || gs.body.slice(0, 200), x: 70, y: 860, w: W-150, h: 240, fontSize: 34, weight: 400, color: "#C8C8C8", font: SG, align: "left", lineHeight: 1.5 });
+
+      } else if (tpl === 9) {
+        // Vertical timeline with 3 numbered steps
+        els.push({ id: `${cid}-s${i}-c1`, type: "shape", shape: "circle", x: W-250, y: H-350, w: 500, h: 500, color: accentColor, opacity: 0.05 });
+        els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 70, w: W-120, h: 200, fontSize: 88, weight: 900, color: "#FFFFFF", font: TBF, align: "center", lineHeight: 0.9 });
+        addProfile(310);
+        // Timeline vertical line
+        els.push({ id: `${cid}-s${i}-line`, type: "shape", shape: "rect", x: 96, y: 420, w: 4, h: 680, color: accentColor, opacity: 0.25, radius: 2 });
+        // Steps
+        const stepYs = [420, 650, 880];
+        const stepOpacities = [1, 0.75, 0.5];
+        const bodyLines = gs.body.split(/\n|[.!?]\s+/).filter(Boolean);
+        for (let s = 0; s < 3; s++) {
+          els.push({ id: `${cid}-s${i}-sc${s}`, type: "shape", shape: "circle", x: 62, y: stepYs[s], w: 72, h: 72, color: accentColor, opacity: stepOpacities[s] });
+          els.push({ id: `${cid}-s${i}-sn${s}`, type: "text", text: String(s + 1), x: 62, y: stepYs[s]+4, w: 72, h: 64, fontSize: 28, weight: 900, color: "#000000", font: TBF, align: "center" });
+          els.push({ id: `${cid}-s${i}-st${s}`, type: "text", text: bodyLines[s] || gs.body.slice(s * 80, (s + 1) * 80), x: 160, y: stepYs[s]+4, w: W-220, h: 60, fontSize: 34, weight: 600, color: "#FFFFFF", font: SG, align: "left" });
+          if (bodyLines[s + 3]) els.push({ id: `${cid}-s${i}-sd${s}`, type: "text", text: bodyLines[s + 3], x: 160, y: stepYs[s]+52, w: W-220, h: 50, fontSize: 28, weight: 400, color: "#A0A0A0", font: SG, align: "left" });
+        }
+
+      } else if (tpl === 10) {
+        // Editorial split: giant title left column, body right column
+        els.push({ id: `${cid}-s${i}-topbar`, type: "shape", shape: "rect", x: 60, y: 60, w: W-120, h: 3, color: accentColor, opacity: 0.5, radius: 2 });
+        els.push({ id: `${cid}-s${i}-label`, type: "shape", shape: "rect", x: 60, y: 75, w: 100, h: 6, color: accentColor, opacity: 0.35, radius: 3 });
+        els.push({ id: `${cid}-s${i}-h`, type: "text", text: titleText, segments, x: 60, y: 110, w: 440, h: 900, fontSize: 138, weight: 900, color: "#FFFFFF", font: TBF, align: "left", lineHeight: 0.87 });
+        els.push({ id: `${cid}-s${i}-vdiv`, type: "shape", shape: "rect", x: 540, y: 110, w: 1, h: 960, color: "#ffffff", opacity: 0.07, radius: 1 });
+        addProfile(100, 580, 460);
+        els.push({ id: `${cid}-s${i}-p`, type: "text", text: gs.body, x: 580, y: 200, w: 440, h: 860, fontSize: 38, weight: 400, color: "#C0C0C0", font: SG, align: "left", lineHeight: 1.68 });
+        els.push({ id: `${cid}-s${i}-botbar`, type: "shape", shape: "rect", x: 60, y: H-100, w: W-120, h: 2, color: "#ffffff", opacity: 0.07, radius: 1 });
       }
 
       addPageNum();
@@ -320,7 +376,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   let theme: string, slideCount: number, tone: string, detail: string;
-  let viral: boolean, imageSlides: number[], accentColor: string, useFace: boolean;
+  let viral: boolean, imageSlides: number[], accentColor: string;
   let pasteContent: string | undefined, modeDebate: boolean, paletteColors: string[] | undefined;
 
   try {
@@ -333,7 +389,6 @@ export async function POST(req: NextRequest) {
     modeDebate = body.modeDebate === true;
     imageSlides = Array.isArray(body.imageSlides) ? body.imageSlides : [];
     accentColor = /^#[0-9A-Fa-f]{6}$/.test(body.accentColor || "") ? body.accentColor : "#FFD700";
-    useFace = body.useFace === true;
     pasteContent = typeof body.pasteContent === "string" && body.pasteContent.trim() ? body.pasteContent.trim() : undefined;
     paletteColors = Array.isArray(body.paletteColors) ? body.paletteColors.filter((c: unknown) => typeof c === "string" && /^#[0-9A-Fa-f]{6}$/.test(c as string)) : undefined;
   } catch {
