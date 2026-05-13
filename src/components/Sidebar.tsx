@@ -1,8 +1,13 @@
 "use client";
-
-import Link from "next/link";
+import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Icon from "./Icon";
+import { LayoutDashboard, Newspaper, Calendar, BookOpen, Settings, Plus, PanelLeft, LogOut } from "lucide-react";
+import { SidebarItem } from "@/components/ui/SidebarItem";
+import { LogoMark, LogoLockup } from "@/components/Logo";
+import { useSidebarPinned } from "@/hooks/useSidebarPinned";
+import { cn } from "@/lib/cn";
+
+const ICON = (C: any) => <C size={18} strokeWidth={1.5} />;
 
 interface SidebarProps {
   carouselCount?: number;
@@ -13,101 +18,83 @@ interface SidebarProps {
   planExpiresAt?: string;
 }
 
-export default function Sidebar({ carouselCount = 0, userName = "", isAdmin = false, plan = "free", trialEndsAt, planExpiresAt }: SidebarProps) {
+export default function Sidebar(_props: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
+  const [pinned, setPinned] = useSidebarPinned();
+  const [hover, setHover] = React.useState(false);
+  const expanded = pinned || hover;
 
-  const active = (path: string) => pathname === path || (path !== "/dashboard" && pathname.startsWith(path));
+  const isActive = (href: string) =>
+    href === "/dashboard" ? pathname === href : pathname?.startsWith(href);
 
   async function handleLogout() {
-    await fetch("/api/auth/login", { method: "DELETE" });
+    try { await fetch("/api/auth/login", { method: "DELETE" }); } catch {}
     router.push("/");
   }
 
-  const initials = userName
-    ? userName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-    : "NC";
-
-  // Trial/plan info
-  const now = new Date();
-  const isPro = plan === "pro" && planExpiresAt && new Date(planExpiresAt) > now;
-  const trialEnd = trialEndsAt ? new Date(trialEndsAt) : null;
-  const isInTrial = trialEnd && trialEnd > now;
-  const trialDaysLeft = isInTrial ? Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 4h6a4 4 0 010 8H5z"/>
-            <path d="M5 12h7a4 4 0 010 8H5z" opacity=".5"/>
-          </svg>
-        </div>
-        <div className="brand-name">NovaCraft</div>
-      </div>
-
-      <div className="nav-section">Trabalho</div>
-      <Link href="/dashboard" className={`nav-link ${active("/dashboard") && !active("/dashboard/context") && !active("/dashboard/settings") && !active("/dashboard/editor") && !active("/dashboard/calendar") ? "active" : ""}`}>
-        <Icon name="grid"/> Meus carrosséis
-      </Link>
-      <Link href="/dashboard/context" className={`nav-link ${active("/dashboard/context") ? "active" : ""}`}>
-        <Icon name="brain"/> Contexto da IA
-      </Link>
-      <Link href="/dashboard/calendar" className={`nav-link ${active("/dashboard/calendar") ? "active" : ""}`}>
-        <span style={{ fontSize: 14 }}>📅</span> Calendário
-      </Link>
-      <div className="nav-link" style={{ opacity: .5, cursor: "default" }}>
-        <Icon name="layout"/> Templates <span style={{ fontSize: 10, color: "var(--dim)", marginLeft: 4 }}>em breve</span>
-      </div>
-
-      <div className="nav-section">Conta</div>
-      <Link href="/dashboard/settings" className={`nav-link ${active("/dashboard/settings") ? "active" : ""}`}>
-        <Icon name="settings"/> Configurações
-      </Link>
-      <button className="nav-link" onClick={handleLogout} style={{ width: "100%", textAlign: "left" }}>
-        <Icon name="logout"/> Sair
-      </button>
-
-      {isAdmin && (
-        <>
-          <div className="nav-section">Sistema</div>
-          <Link href="/admin" className="nav-link" style={{ color: "#a855f7" }}>
-            <Icon name="sparkle"/> Admin
-          </Link>
-        </>
+    <aside
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className={cn(
+        "sticky top-0 h-screen bg-bg-surface border-r border-border-subtle",
+        "flex flex-col py-4 transition-[width] duration-base ease-out-custom z-30",
+        expanded ? "w-60" : "w-14"
       )}
+    >
+      <div className={cn("flex items-center px-3 mb-4", expanded ? "justify-start" : "justify-center")}>
+        {expanded ? <LogoLockup /> : <LogoMark />}
+      </div>
 
-      <div className="nav-spacer"/>
+      <div className={cn("px-3 mb-6", expanded ? "" : "flex justify-center")}>
+        <button
+          className={cn(
+            "h-10 rounded-sm bg-accent text-text-inverse flex items-center justify-center font-medium",
+            "hover:bg-accent-hover transition-colors duration-fast",
+            expanded ? "w-full gap-2 px-3" : "w-10"
+          )}
+          onClick={() => window.dispatchEvent(new CustomEvent("nc:open-create"))}
+          aria-label="Criar novo carrossel"
+        >
+          <Plus size={18} strokeWidth={2} />
+          {expanded && <span className="text-body-strong">Criar</span>}
+          {expanded && <span className="ml-auto text-caption text-text-inverse/60 tnum">c</span>}
+        </button>
+      </div>
 
-      <div className="nav-foot">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>{initials}</div>
-          <div className="nav-foot-title" style={{ margin: 0 }}>
-            {isPro ? "Plano Pro" : isInTrial ? "Período de teste" : "Plano Free"}
-          </div>
-        </div>
+      <nav className="flex-1 px-2 flex flex-col gap-1">
+        {expanded && <div className="text-micro text-text-tertiary px-2.5 mt-1 mb-1">BIBLIOTECA</div>}
+        <SidebarItem href="/dashboard" icon={ICON(LayoutDashboard)} label="Dashboard" shortcut="g d" active={pathname === "/dashboard"} expanded={expanded} />
+        <SidebarItem href="/dashboard/news" icon={ICON(Newspaper)} label="Modo Notícia" shortcut="g n" active={!!isActive("/dashboard/news")} expanded={expanded} />
+        <SidebarItem href="/dashboard/calendar" icon={ICON(Calendar)} label="Calendário" shortcut="g c" active={!!isActive("/dashboard/calendar")} expanded={expanded} />
+        <SidebarItem href="/dashboard/context" icon={ICON(BookOpen)} label="Contexto" shortcut="g x" active={!!isActive("/dashboard/context")} expanded={expanded} />
+      </nav>
 
-        {isInTrial && (
-          <div style={{
-            background: "rgba(168,85,247,.1)", border: "1px solid rgba(168,85,247,.25)",
-            borderRadius: 8, padding: "8px 10px", marginBottom: 10,
-          }}>
-            <div style={{ fontSize: 11, color: "#C4B5FD", fontWeight: 500, marginBottom: 2 }}>
-              ✦ Teste gratuito ativo
-            </div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>
-              {trialDaysLeft} dia{trialDaysLeft !== 1 ? "s" : ""} restante{trialDaysLeft !== 1 ? "s" : ""}
-            </div>
-          </div>
+      <div className="px-2 flex flex-col gap-1">
+        <SidebarItem href="/dashboard/settings" icon={ICON(Settings)} label="Configurações" shortcut="g s" active={!!isActive("/dashboard/settings")} expanded={expanded} />
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center h-9 rounded-sm transition-colors duration-fast text-text-secondary hover:bg-bg-surface-2 hover:text-text-primary",
+            expanded ? "px-2.5 gap-2.5" : "justify-center w-10"
+          )}
+          title={!expanded ? "Sair" : undefined}
+          aria-label="Sair"
+        >
+          <span className="w-[18px] h-[18px] flex items-center justify-center"><LogOut size={18} strokeWidth={1.5} /></span>
+          {expanded && <span className="text-body flex-1 truncate text-left">Sair</span>}
+        </button>
+        {expanded && (
+          <button
+            onClick={() => setPinned(!pinned)}
+            className="mt-2 h-8 px-2.5 text-caption text-text-tertiary hover:text-text-primary flex items-center gap-2 rounded-sm hover:bg-bg-surface-2"
+            aria-pressed={pinned}
+          >
+            <PanelLeft size={14} strokeWidth={1.5} />
+            {pinned ? "Desafixar" : "Fixar"}
+          </button>
         )}
-
-        <div className="nav-foot-sub">{carouselCount} carrossel{carouselCount !== 1 ? "s" : ""} criado{carouselCount !== 1 ? "s" : ""}</div>
-        <div className="nav-foot-bar"><div className="nav-foot-bar-fill" style={{ width: `${Math.min(carouselCount * 4, 78)}%` }}/></div>
-        <div className="nav-foot-meta">
-          <span>{carouselCount} / 100</span>
-          <span style={{ color: "#C4B5FD" }}>{isPro ? "Pro ✦" : isInTrial ? "Trial" : "Free"}</span>
-        </div>
       </div>
     </aside>
   );
