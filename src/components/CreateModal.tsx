@@ -1,60 +1,25 @@
 "use client";
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { GenOverlay } from "@/components/GenOverlay";
+import { cn } from "@/lib/cn";
 
-import { useState, useEffect } from "react";
-import Icon from "./Icon";
-
-const TONES = [
-  { id: "direct",      label: "Direto",       hint: "Curto, sem rodeios" },
-  { id: "editorial",   label: "Editorial",    hint: "Revista / autoral" },
-  { id: "didactic",    label: "Didático",     hint: "Explica passo a passo" },
-  { id: "provocative", label: "Provocativo",  hint: "Faz pensar / contraintuitivo" },
-  { id: "casual",      label: "Casual",       hint: "Tom de conversa" },
-  { id: "authoritive", label: "Autoritativo", hint: "Especialista que ensina" },
+type Tone = "profissional" | "casual" | "educativo" | "provocativo" | "storytelling";
+const TONES: { v: Tone; title: string; desc: string }[] = [
+  { v: "profissional",  title: "Profissional",  desc: "Tom de relatório, direto." },
+  { v: "casual",        title: "Casual",        desc: "Linguagem do dia-a-dia." },
+  { v: "educativo",     title: "Educativo",     desc: "Explica como um professor." },
+  { v: "provocativo",   title: "Provocativo",   desc: "Ganchos, perguntas fortes." },
+  { v: "storytelling",  title: "Storytelling",  desc: "História com começo, meio e fim." },
 ];
+const ACCENTS = ["#C6F84E", "#7DD3FC", "#F472B6", "#FBBF24", "#A78BFA", "#34D399", "#FB7185", "#F5F5F7"];
+const SUGGESTIONS = ["Marketing", "Vendas", "Saúde", "Tech", "Lifestyle", "Educação"];
 
-const DETAIL_LEVELS = [
-  { id: "high",   label: "Detalhado",   hint: "Argumentos completos, dados e fontes" },
-  { id: "medium", label: "Equilibrado", hint: "Pontos-chave com profundidade" },
-  { id: "short",  label: "Sucinto",     hint: "Direto ao ponto, frases curtas" },
-];
-
-const SUGGESTED_THEMES = [
-  "5 erros que matam seu engajamento",
-  "Como triplicar alcance orgânico",
-  "Hooks que travam o dedo do leitor",
-  "Por que ninguém compra do seu post",
-  "A arquitetura de um carrossel viral",
-  "O método que dobrou meu alcance em 30 dias",
-  "3 verdades que ninguém te conta sobre crescer no Instagram",
-];
-
-const HOOK_LIBRARY = [
-  { hook: "Todo mundo diz X. Mas a realidade é Y.", label: "Contraintuitivo" },
-  { hook: "Pare de fazer isso se você quer crescer.", label: "Provocativo" },
-  { hook: "O segredo que os maiores criadores escondem.", label: "Curiosidade" },
-  { hook: "Fiz X experimentos. Aprenda com meus erros.", label: "Prova Social" },
-  { hook: "Em 30 dias apliquei isso. Veja o resultado.", label: "Resultado" },
-  { hook: "O que ninguém te ensinou sobre [tema].", label: "Gap de Saber" },
-  { hook: "Se você faz isso, está perdendo seguidores.", label: "Medo de Perda" },
-  { hook: "Método simples que gerou 10x mais resultados.", label: "Simplificação" },
-];
-
-interface ColorPalette {
-  id: string;
-  name: string;
-  colors: string[];
-}
-
-const ACCENT_PRESETS = [
-  { color: "#FFD700", label: "Ouro" },
-  { color: "#F97316", label: "Laranja" },
-  { color: "#A855F7", label: "Roxo" },
-  { color: "#22D3EE", label: "Ciano" },
-  { color: "#4ADE80", label: "Verde" },
-  { color: "#F43F5E", label: "Vermelho" },
-  { color: "#FFFFFF", label: "Branco" },
-];
-
+// Compat: legacy settings shape consumed by parent pages.
 export interface GenerateSettings {
   theme: string;
   pasteContent?: string;
@@ -70,432 +35,201 @@ export interface GenerateSettings {
   useFace: boolean;
 }
 
-interface CreateModalProps {
+export interface CreateModalProps {
+  /** New API (DESIGN.md §4.4). Optional — when absent the modal assumes it is mounted conditionally by the parent (legacy behavior). */
+  open?: boolean;
+  /** Legacy alias. */
+  isOpen?: boolean;
   onClose: () => void;
-  onGenerate: (settings: GenerateSettings) => void;
+  /** New: receives created carousel id after POST /api/carousel/generate succeeds. */
+  onCreated?: (id: string) => void;
+  /** Legacy: parent handles generation. When provided, the modal does NOT fetch — it just delegates the settings. */
+  onGenerate?: (settings: GenerateSettings) => void;
   prefill?: { theme?: string; tone?: string };
 }
 
-export default function CreateModal({ onClose, onGenerate, prefill }: CreateModalProps) {
-  const [step, setStep] = useState(1);
-  const [theme, setTheme] = useState(prefill?.theme || "");
-  const [pasteContent, setPasteContent] = useState("");
-  const [showPaste, setShowPaste] = useState(false);
-  const [tone, setTone] = useState(prefill?.tone || "direct");
-  const [detail, setDetail] = useState("medium");
-  const [modeDebate, setModeDebate] = useState(false);
-  const [slideCount, setSlideCount] = useState(7);
-  const [viral, setViral] = useState(true);
-  const [imageSlides, setImageSlides] = useState<Set<number>>(new Set([1, 3]));
-  const [accentColor, setAccentColor] = useState("#FFD700");
-  const [useFace, setUseFace] = useState(false);
-  const [hasFaceImages, setHasFaceImages] = useState(false);
+export default function CreateModal(props: CreateModalProps) {
+  const { onClose, onCreated, onGenerate, prefill } = props;
+  const open = props.open ?? props.isOpen ?? true;
+  const router = useRouter();
+  const [step, setStep] = React.useState<1 | 2 | 3>(1);
+  const [theme, setTheme] = React.useState(prefill?.theme || "");
+  const [useBrand, setUseBrand] = React.useState(true);
+  const [tone, setTone] = React.useState<Tone>("educativo");
+  const [slides, setSlides] = React.useState(7);
+  const [accent, setAccent] = React.useState(ACCENTS[0]);
+  const [aiImages, setAiImages] = React.useState(true);
+  const [genStep, setGenStep] = React.useState<number | null>(null);
 
-  // Palette state
-  const [palettes, setPalettes] = useState<ColorPalette[]>([]);
-  const [selectedPaletteId, setSelectedPaletteId] = useState<string | null>(null);
+  const reset = () => { setStep(1); setTheme(prefill?.theme || ""); setGenStep(null); };
 
-  useEffect(() => {
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.brandAccentColor) setAccentColor(d.brandAccentColor);
-        if (d.hasFaceImages) setHasFaceImages(true);
-      })
-      .catch(() => {});
-
-    fetch("/api/user/palettes")
-      .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.palettes)) setPalettes(d.palettes); })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    setImageSlides((prev) => new Set(Array.from(prev).filter((i) => i < slideCount)));
-  }, [slideCount]);
-
-  const selectedPalette = palettes.find((p) => p.id === selectedPaletteId);
-
-  const toggleImage = (i: number) => {
-    setImageSlides((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
-  };
-
-  const useHook = (hook: string) => {
-    setTheme(hook);
-    setShowPaste(false);
-  };
-
-  const canGen = theme.trim().length >= 4;
-
-  const effectiveAccent = selectedPalette && selectedPalette.colors.length > 0
-    ? selectedPalette.colors[0]
-    : accentColor;
+  async function submit() {
+    // Legacy path: delegate to parent.
+    if (onGenerate) {
+      const imageSlides = aiImages ? Array.from({ length: slides }, (_, i) => i) : [];
+      onGenerate({
+        theme,
+        tone,
+        detail: "medium",
+        slideCount: slides,
+        viral: true,
+        modeDebate: false,
+        imageSlides,
+        accentColor: accent,
+        useFace: false,
+      });
+      return;
+    }
+    // New path: own the fetch + redirect.
+    setGenStep(0);
+    try {
+      const res = await fetch("/api/carousel/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme, tone, slides, accent, aiImages, useBrand }),
+      });
+      for (let i = 1; i <= 4; i++) { await wait(700); setGenStep(i); }
+      const data = await res.json().catch(() => ({}));
+      const id = data?.id ?? data?._id ?? data?.carouselId;
+      if (id) {
+        onCreated?.(id);
+        router.push(`/dashboard/editor/${id}`);
+      }
+    } finally { /* keep overlay until route change */ }
+  }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <h2><span className="gt">Novo carrossel</span> com IA</h2>
-            <p>Etapa {step} de 3 · {step === 1 ? "Tema e formato" : step === 2 ? "Detalhamento e tom" : "Imagens e otimizações"}</p>
-          </div>
-          <button className="modal-close" onClick={onClose}><Icon name="x"/></button>
-        </div>
-
-        <div className="modal-body">
-          {/* ── STEP 1: Theme & Format ── */}
-          {step === 1 && (
-            <>
-              <div className="field">
-                <div className="field-label">
-                  Tema ou assunto do carrossel
-                  <span className="field-hint">{theme.length}/200</span>
-                </div>
-                <textarea
-                  className="textarea lg"
-                  placeholder='ex: "Como criar uma rotina de conteúdo que aguenta 6 meses"'
-                  maxLength={200}
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="field">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div className="field-label" style={{ marginBottom: 0 }}>Sugestões para começar</div>
-                  <button
-                    onClick={() => setShowPaste(!showPaste)}
-                    className="btn btn-ghost"
-                    style={{ fontSize: 11, padding: "5px 12px" }}
-                  >
-                    <Icon name="image"/> {showPaste ? "Ocultar" : "Colar conteúdo existente"}
-                  </button>
-                </div>
-                <div className="chip-grid">
-                  {SUGGESTED_THEMES.map((s) => (
-                    <button key={s} className="chip" onClick={() => setTheme(s)}>
-                      <Icon name="sparkle"/> {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {showPaste && (
-                <div className="field" style={{ background: "rgba(168,85,247,.05)", border: "1px solid rgba(168,85,247,.2)", borderRadius: 14, padding: 16 }}>
-                  <div className="field-label" style={{ color: "#C4B5FD" }}>
-                    <Icon name="sparkle"/> Colar Qualquer Coisa
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
-                    Cole um post de blog, thread, e-mail, transcrição de vídeo ou qualquer texto. A IA extrai os pontos principais e transforma em carrossel.
-                  </div>
-                  <textarea
-                    className="textarea"
-                    style={{ minHeight: 120, fontSize: 13 }}
-                    placeholder="Cole aqui seu conteúdo longo... artigo, thread, transcrição, e-mail, etc."
-                    value={pasteContent}
-                    onChange={(e) => setPasteContent(e.target.value)}
-                  />
-                  <div style={{ fontSize: 11, color: "var(--dim)", marginTop: 6 }}>
-                    A IA vai condensar este conteúdo em slides. O campo &ldquo;tema&rdquo; acima será usado como título geral.
-                  </div>
-                </div>
-              )}
-
-              <div className="field">
-                <div className="field-label">Biblioteca de Hooks</div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Hooks com alto potencial viral — clique para usar como tema</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {HOOK_LIBRARY.map((h) => (
-                    <button
-                      key={h.hook}
-                      onClick={() => useHook(h.hook)}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        background: "var(--bg3)", border: "1px solid var(--b)",
-                        borderRadius: 10, padding: "10px 14px",
-                        cursor: "pointer", textAlign: "left", gap: 12,
-                        transition: "border-color .2s",
-                      }}
-                      className="hook-btn"
-                    >
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,.75)", flex: 1 }}>{h.hook}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "#A855F7", flexShrink: 0, background: "rgba(168,85,247,.12)", border: "1px solid rgba(168,85,247,.25)", borderRadius: 999, padding: "2px 8px" }}>{h.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="field">
-                <div className="field-label">Número de slides</div>
-                <div className="slide-count-row">
-                  {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                    <button key={n} className={`slide-count-btn ${slideCount === n ? "active" : ""}`} onClick={() => setSlideCount(n)}>
-                      {n}
-                    </button>
-                  ))}
-                </div>
-                <div className="field-help">Carrosséis entre 6 e 8 slides têm os melhores índices de retenção no Instagram.</div>
-              </div>
-            </>
-          )}
-
-          {/* ── STEP 2: Tone & Detail ── */}
-          {step === 2 && (
-            <>
-              <div className="field">
-                <div className="field-label">Estilo de escrita</div>
-                <div className="chip-grid">
-                  {TONES.map((t) => (
-                    <button key={t.id} className={`chip ${tone === t.id ? "active" : ""}`} onClick={() => setTone(t.id)}>
-                      {t.label}
-                      <span style={{ color: "rgba(255,255,255,.4)", fontSize: 11 }}>· {t.hint}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="field">
-                <div className="field-label">Nível de detalhe do conteúdo</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {DETAIL_LEVELS.map((d) => (
-                    <button key={d.id}
-                      className={`chip ${detail === d.id ? "active" : ""}`}
-                      onClick={() => setDetail(d.id)}
-                      style={{ flexDirection: "column", alignItems: "flex-start", padding: "14px 16px", height: "auto", textAlign: "left" }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>{d.label}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginTop: 4, lineHeight: 1.45 }}>{d.hint}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="field">
-                <div className="field-label">Modo especial</div>
-                <div
-                  className={`toggle-row ${modeDebate ? "on" : ""}`}
-                  onClick={() => setModeDebate(!modeDebate)}
-                  style={{ background: modeDebate ? "rgba(249,115,22,.08)" : undefined, borderColor: modeDebate ? "rgba(249,115,22,.3)" : undefined }}
-                >
-                  <div className="toggle-row-text">
-                    <div className="toggle-row-title" style={{ color: modeDebate ? "#F97316" : undefined }}>
-                      🔥 Modo Debate / Contraintuitivo
-                    </div>
-                    <div className="toggle-row-sub">
-                      Estrutura provocativa: &ldquo;Todo mundo diz X. Mas a realidade é Y. Aqui está a prova.&rdquo; Alto potencial viral por contrariedade controlada.
-                    </div>
-                  </div>
-                  <div className={`tg ${modeDebate ? "on" : ""}`} style={{ background: modeDebate ? "#F97316" : undefined }}><div className="tg-k"/></div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ── STEP 3: Images & Palette ── */}
-          {step === 3 && (
-            <>
-              <div className="field">
-                <div className="field-label">
-                  Quais slides terão imagem?
-                  <span className="field-hint">{imageSlides.size} de {slideCount} selecionados</span>
-                </div>
-                <div className="img-grid" style={{ gridTemplateColumns: `repeat(${Math.min(slideCount, 8)}, 1fr)` }}>
-                  {Array.from({ length: slideCount }, (_, i) => (
-                    <button key={i} className={`img-tile ${imageSlides.has(i) ? "on" : ""}`} onClick={() => toggleImage(i)}>
-                      <div className="img-tile-num">{String(i + 1).padStart(2, "0")}</div>
-                      <div className="img-tile-ico">
-                        {imageSlides.has(i) ? <Icon name="check"/> : <Icon name="image"/>}
-                      </div>
-                      <div className="img-tile-lbl">{i === 0 ? "capa" : i === slideCount - 1 ? "cta" : "slide"}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Palette selector */}
-              {palettes.length > 0 && (
-                <div className="field">
-                  <div className="field-label">Paleta de cores</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <button
-                      onClick={() => setSelectedPaletteId(null)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 12,
-                        background: selectedPaletteId === null ? "rgba(108,39,190,.12)" : "var(--bg3)",
-                        border: selectedPaletteId === null ? "1px solid rgba(108,39,190,.4)" : "1px solid var(--b)",
-                        borderRadius: 12, padding: "12px 16px", cursor: "pointer", textAlign: "left",
-                      }}
-                    >
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: accentColor, border: "1px solid rgba(255,255,255,.2)", flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>Cor de destaque padrão</div>
-                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{accentColor}</div>
-                      </div>
-                      {selectedPaletteId === null && <div style={{ marginLeft: "auto", color: "#A855F7", fontSize: 12 }}>✓ Selecionado</div>}
-                    </button>
-
-                    {palettes.map((pal) => (
-                      <button
-                        key={pal.id}
-                        onClick={() => setSelectedPaletteId(pal.id)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 12,
-                          background: selectedPaletteId === pal.id ? "rgba(108,39,190,.12)" : "var(--bg3)",
-                          border: selectedPaletteId === pal.id ? "1px solid rgba(108,39,190,.4)" : "1px solid var(--b)",
-                          borderRadius: 12, padding: "12px 16px", cursor: "pointer", textAlign: "left",
-                        }}
-                      >
-                        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                          {pal.colors.slice(0, 5).map((hex) => (
-                            <div key={hex} style={{ width: 20, height: 20, borderRadius: 5, background: hex, border: "1px solid rgba(255,255,255,.15)" }} />
-                          ))}
-                          {pal.colors.length > 5 && (
-                            <div style={{ width: 20, height: 20, borderRadius: 5, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "var(--muted)" }}>
-                              +{pal.colors.length - 5}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>{pal.name}</div>
-                          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{pal.colors.length} cor{pal.colors.length !== 1 ? "es" : ""}</div>
-                        </div>
-                        {selectedPaletteId === pal.id && <div style={{ marginLeft: "auto", color: "#A855F7", fontSize: 12 }}>✓ Selecionado</div>}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="field-help">A primeira cor da paleta será usada nos destaques de texto e nas imagens geradas.</div>
-                </div>
-              )}
-
-              {/* Custom color picker (shown when no palette selected or no palettes) */}
-              {!selectedPaletteId && (
-                <div className="field">
-                  <div className="field-label">Cor de destaque do carrossel</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    {ACCENT_PRESETS.map((p) => (
-                      <button
-                        key={p.color}
-                        title={p.label}
-                        onClick={() => setAccentColor(p.color)}
-                        style={{
-                          width: 32, height: 32, borderRadius: "50%",
-                          background: p.color,
-                          border: accentColor === p.color ? "3px solid #fff" : "2px solid rgba(255,255,255,0.2)",
-                          cursor: "pointer", flexShrink: 0,
-                          boxShadow: accentColor === p.color ? `0 0 0 2px ${p.color}55` : "none",
-                        }}
-                      />
-                    ))}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: accentColor, border: "2px solid rgba(255,255,255,0.3)", flexShrink: 0 }}/>
-                      <input
-                        type="text"
-                        className="input"
-                        value={accentColor}
-                        onChange={(e) => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setAccentColor(e.target.value); }}
-                        style={{ width: 90, fontFamily: "JetBrains Mono, monospace", fontSize: 12 }}
-                        placeholder="#FFD700"
-                      />
-                    </div>
-                  </div>
-                  <div className="field-help">Cor usada nos destaques de texto e na iluminação das imagens geradas.</div>
-                </div>
-              )}
-
-              <div className="field">
-                <div className="field-label">Otimizações</div>
-                <div className={`toggle-row viral ${viral ? "on" : ""}`} onClick={() => setViral(!viral)}>
-                  <div className="toggle-row-text">
-                    <div className="toggle-row-title"><Icon name="flame"/> Fator viral</div>
-                    <div className="toggle-row-sub">Ativa ganchos fortes, imagens surreais e cinematográficas, loops narrativos e CTA estratégico.</div>
-                  </div>
-                  <div className={`tg ${viral ? "on" : ""}`}><div className="tg-k"/></div>
-                </div>
-
-                {hasFaceImages && (
-                  <div className={`toggle-row ${useFace ? "on" : ""}`} style={{ marginTop: 8 }} onClick={() => setUseFace(!useFace)}>
-                    <div className="toggle-row-text">
-                      <div className="toggle-row-title"><Icon name="user"/> Usar meu rosto nas imagens</div>
-                      <div className="toggle-row-sub">O Gemini usará suas fotos de referência para gerar imagens com seu rosto como sujeito principal.</div>
-                    </div>
-                    <div className={`tg ${useFace ? "on" : ""}`}><div className="tg-k"/></div>
-                  </div>
-                )}
-              </div>
-
-              <div className="field">
-                <div className="field-label">Resumo</div>
-                <div style={{ background: "var(--bg3)", border: "1px solid var(--b)", borderRadius: 12, padding: "14px 16px", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
-                  <div>
-                    <b style={{ color: "#fff" }}>{slideCount} slides</b> · tom <b style={{ color: "#fff" }}>{TONES.find((t) => t.id === tone)?.label.toLowerCase()}</b> · detalhe <b style={{ color: "#fff" }}>{DETAIL_LEVELS.find((d) => d.id === detail)?.label.toLowerCase()}</b>
-                  </div>
-                  <div>
-                    Imagens em <b style={{ color: "#fff" }}>{imageSlides.size}</b> slide{imageSlides.size === 1 ? "" : "s"}
-                    {viral ? " · " : ""}{viral && <b style={{ color: "#F97316" }}>fator viral ativo</b>}
-                    {modeDebate ? " · " : ""}{modeDebate && <b style={{ color: "#F97316" }}>modo debate ativo</b>}
-                    {useFace ? " · " : ""}{useFace && <b style={{ color: effectiveAccent }}>rosto de referência ativo</b>}
-                    {pasteContent.trim() ? " · " : ""}{pasteContent.trim() && <b style={{ color: "#C4B5FD" }}>conteúdo colado</b>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
-                    {selectedPalette ? (
-                      <>
-                        <div style={{ display: "flex", gap: 3 }}>
-                          {selectedPalette.colors.slice(0, 4).map((hex) => (
-                            <div key={hex} style={{ width: 12, height: 12, borderRadius: 3, background: hex, flexShrink: 0 }} />
-                          ))}
-                        </div>
-                        <span>Paleta: <b style={{ color: "#C4B5FD" }}>{selectedPalette.name}</b></span>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ width: 12, height: 12, borderRadius: "50%", background: accentColor, flexShrink: 0 }}/>
-                        <span>Cor de destaque: <b style={{ color: accentColor }}>{accentColor}</b></span>
-                      </>
-                    )}
-                  </div>
-                  <div style={{ marginTop: 6, color: "#C4B5FD" }}>Tema: &ldquo;{theme || "—"}&rdquo;</div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="modal-foot">
-          <div className="modal-foot-info">
-            <Icon name="zap"/>
-            Estimado: ~{Math.max(8, slideCount * 3)}s · 1 crédito Gemini
-          </div>
-          <div className="modal-foot-actions">
-            {step > 1 && <button className="btn btn-ghost" onClick={() => setStep((s) => s - 1)}><Icon name="arrowLeft"/> Voltar</button>}
-            {step < 3 && <button className="btn btn-pri" onClick={() => setStep((s) => s + 1)} disabled={step === 1 && !canGen}>Continuar <Icon name="arrowRight"/></button>}
-            {step === 3 && (
-              <button
-                className="btn btn-pri"
-                onClick={() => onGenerate({
-                  theme,
-                  pasteContent: pasteContent.trim() || undefined,
-                  tone,
-                  detail,
-                  slideCount,
-                  viral,
-                  modeDebate,
-                  imageSlides: Array.from(imageSlides),
-                  accentColor: effectiveAccent,
-                  paletteColors: selectedPalette?.colors,
-                  paletteId: selectedPalette?.id,
-                  useFace,
-                })}
-              >
-                <Icon name="sparkle"/> Gerar carrossel
-              </button>
+    <>
+      <Modal
+        open={open && genStep === null}
+        onClose={() => { onClose(); reset(); }}
+        size="lg"
+        title="Novo carrossel"
+        footer={
+          <>
+            {step > 1 && <Button variant="ghost" onClick={() => setStep((s) => (s - 1) as any)}>Voltar</Button>}
+            {step < 3 && (
+              <Button variant="primary" onClick={() => setStep((s) => (s + 1) as any)} disabled={step === 1 && !theme.trim()}>
+                Continuar
+              </Button>
             )}
+            {step === 3 && <Button variant="primary" size="lg" onClick={submit}>Gerar agora</Button>}
+          </>
+        }
+      >
+        <Stepper step={step} />
+        {step === 1 && (
+          <div className="flex flex-col gap-4">
+            <Input
+              label="Sobre o que é o carrossel?"
+              helper="Seja específico. Ex: '5 erros que fazem você perder seguidores no Instagram em 2026'."
+              inputSize="lg"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              autoFocus
+            />
+            <div className="flex flex-wrap gap-2">
+              {SUGGESTIONS.map((s) => (
+                <Chip key={s} onClick={() => setTheme((t) => t ? t : s)}>{s}</Chip>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 mt-2">
+              <Switch checked={useBrand} onChange={setUseBrand} />
+              <span className="text-body text-text-secondary">Usar contexto da minha marca</span>
+            </label>
           </div>
-        </div>
-      </div>
+        )}
+        {step === 2 && (
+          <div className="grid grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-caption text-text-secondary">Tom de voz</label>
+              {TONES.map((t) => (
+                <button key={t.v} type="button" onClick={() => setTone(t.v)}
+                  className={cn(
+                    "text-left p-3 rounded-md border transition-colors duration-fast",
+                    tone === t.v ? "border-accent bg-accent-muted" : "border-border-subtle bg-bg-surface-2 hover:border-border"
+                  )}>
+                  <div className="text-body-strong text-text-primary">{t.title}</div>
+                  <div className="text-caption text-text-tertiary">{t.desc}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-caption text-text-secondary block mb-1.5">Quantidade de slides: <span className="text-text-primary tnum">{slides}</span></label>
+                <input type="range" min={4} max={10} value={slides}
+                  onChange={(e) => setSlides(Number(e.target.value))} className="w-full accent-accent" />
+              </div>
+              <div>
+                <label className="text-caption text-text-secondary block mb-1.5">Cor de acento</label>
+                <div className="flex flex-wrap gap-2">
+                  {ACCENTS.map((c) => (
+                    <button key={c} onClick={() => setAccent(c)}
+                      className={cn("h-7 w-7 rounded-pill border-2 transition-colors duration-fast", accent === c ? "border-text-primary" : "border-transparent")}
+                      style={{ background: c }} aria-label={c} />
+                  ))}
+                </div>
+              </div>
+              <label className="flex items-center gap-2">
+                <Switch checked={aiImages} onChange={setAiImages} />
+                <span className="text-body text-text-secondary">Gerar imagens com IA</span>
+              </label>
+            </div>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="flex flex-col gap-4">
+            <Spec label="Tema" value={theme || "—"} />
+            <Spec label="Estilo" value={`${cap(tone)} · ${slides} slides · Acento ${accent}`} />
+            <Spec label="Imagens" value={aiImages ? `Gerar com IA (custa ${slides} imagens do plano)` : "Sem imagens IA"} />
+          </div>
+        )}
+      </Modal>
+      {genStep !== null && <GenOverlay stepIndex={genStep} />}
+    </>
+  );
+}
+
+function Stepper({ step }: { step: 1 | 2 | 3 }) {
+  const items = [{ n: 1, l: "Tema" }, { n: 2, l: "Estilo" }, { n: 3, l: "Revisão" }];
+  return (
+    <div className="flex items-center gap-3 mb-6">
+      {items.map((it, i) => (
+        <React.Fragment key={it.n}>
+          <div className={cn("flex items-center gap-2 text-caption",
+            step === it.n ? "text-accent" : step > it.n ? "text-text-secondary" : "text-text-tertiary")}>
+            <span className={cn(
+              "h-5 w-5 rounded-pill flex items-center justify-center text-[11px] tnum",
+              step === it.n ? "bg-accent text-text-inverse" : step > it.n ? "bg-bg-surface-2 border border-border" : "bg-bg-surface-2 text-text-tertiary"
+            )}>{it.n}</span>
+            <span>{it.l}</span>
+          </div>
+          {i < items.length - 1 && <span className="text-text-tertiary">→</span>}
+        </React.Fragment>
+      ))}
     </div>
   );
 }
+
+function Spec({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="border-l-2 border-border-subtle pl-3">
+      <div className="text-micro text-text-tertiary">{label}</div>
+      <div className="text-body text-text-primary mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+      className={cn("h-5 w-9 rounded-pill p-0.5 transition-colors duration-fast",
+        checked ? "bg-accent" : "bg-bg-surface-3 border border-border")}>
+      <span className={cn("block h-4 w-4 rounded-pill bg-text-inverse transition-transform duration-fast",
+        checked ? "translate-x-4" : "translate-x-0")} />
+    </button>
+  );
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
