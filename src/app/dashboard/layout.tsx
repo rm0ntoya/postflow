@@ -7,6 +7,7 @@ import Carousel from "@/models/Carousel";
 import { getAppConfig } from "@/models/AppConfig";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionUser();
@@ -65,6 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isAdmin = !!u?.isAdmin;
 
   return (
+    <ToastProvider>
     <div className="app">
       {cfg.announcementActive && cfg.announcementBanner && (
         <div style={{
@@ -87,5 +89,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       />
       {children}
     </div>
+    </ToastProvider>
   );
 }
