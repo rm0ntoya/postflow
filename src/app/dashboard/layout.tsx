@@ -7,6 +7,7 @@ import Carousel from "@/models/Carousel";
 import { getAppConfig } from "@/models/AppConfig";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import DashboardShell from "@/components/DashboardShell";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -67,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <ToastProvider>
-    <div className="app">
+    <div className="flex min-h-screen bg-bg-base">
       {cfg.announcementActive && cfg.announcementBanner && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
@@ -87,7 +88,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         trialEndsAt={u?.trialEndsAt ? new Date(u.trialEndsAt).toISOString() : undefined}
         planExpiresAt={u?.planExpiresAt ? new Date(u.planExpiresAt).toISOString() : undefined}
       />
-      {children}
+      <DashboardShell>{children}</DashboardShell>
     </div>
     </ToastProvider>
   );
