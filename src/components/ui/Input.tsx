@@ -38,8 +38,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           id={inputId}
           className={cn(
             "peer w-full bg-transparent outline-none px-3 text-text-primary placeholder:text-text-tertiary text-[14px]",
-            iconLeft && "pl-2",
-            iconRight && "pr-2",
+            iconLeft ? "pl-2" : "",
+            iconRight ? "pr-2" : "",
             className
           )}
           {...rest}
