@@ -5,10 +5,11 @@ import User from "@/models/User";
 import Carousel, { IElement } from "@/models/Carousel";
 import { getSessionUser } from "@/lib/auth";
 import { decryptApiKey } from "@/lib/encryption";
+import { uploadToImgbb } from "@/lib/imgbb";
 
 export const maxDuration = 120;
 
-const IMAGE_MODEL = "gemini-3-pro-image-preview";
+const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
 
 async function createThumbnail(base64Url: string): Promise<string | null> {
   try {
@@ -17,7 +18,8 @@ async function createThumbnail(base64Url: string): Promise<string | null> {
     const base64Data = base64Url.slice(sepIdx + 1);
     const buffer = Buffer.from(base64Data, "base64");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Jimp = require("jimp");
+    const JimpMod = require("jimp");
+    const Jimp = JimpMod.default ?? JimpMod;
     const image = await Jimp.read(buffer);
     image.resize(216, 270).quality(55);
     const thumbBuffer: Buffer = await image.getBufferAsync("image/jpeg");
@@ -170,24 +172,20 @@ async function generateImage(
   promptText: string,
   apiKey: string,
   faceImages: string[],
-  hasFaceRef: boolean
+  hasFaceRef: boolean,
+  imageModel: string
 ): Promise<string | null> {
-  console.log("[generate-images] Iniciando geracao de imagem...");
-  console.log("[generate-images] Tem foto de rosto (faceRef)?", hasFaceRef, "| faceImages count:", faceImages.length);
-  
   try {
     const ai = new GoogleGenAI({ apiKey });
 
     const parts: object[] = [];
 
     if (hasFaceRef && faceImages.length > 0) {
-      console.log("[generate-images] Parseando imagem de rosto...");
       const { mimeType, data } = parseDataUrl(faceImages[0]);
       parts.push({ inlineData: { mimeType, data } });
     }
 
     parts.push({ text: promptText });
-    console.log("[generate-images] Prompt length:", promptText.length);
 
     const contents = [{ role: "user", parts }];
 
@@ -197,54 +195,37 @@ async function generateImage(
         imageSize: "1K",
       },
       responseModalities: ["IMAGE", "TEXT"] as string[],
-      tools: [{ googleSearch: {} }],
     };
 
-    console.log("[generate-images] Enviando requisicao ao Gemini...");
     const response = await ai.models.generateContentStream({
-      model: IMAGE_MODEL,
+      model: imageModel,
       config,
       contents,
     });
-    console.log("[generate-images] Requisicao enviada, lendo stream de resposta...");
 
-    let chunkCount = 0;
     for await (const chunk of response) {
-      chunkCount++;
-      console.log(`[generate-images] Recebido chunk #${chunkCount}`);
       const chunkParts = chunk.candidates?.[0]?.content?.parts;
       if (!chunkParts) continue;
       for (const part of chunkParts) {
         const inlineData = (part as { inlineData?: { mimeType?: string; data?: string } }).inlineData;
         if (inlineData?.data) {
-          console.log("[generate-images] SUCESSO: Imagem extraída do chunk com mimeType:", inlineData.mimeType || "image/png");
           const mimeType = inlineData.mimeType || "image/png";
           return `data:${mimeType};base64,${inlineData.data}`;
         }
       }
     }
 
-    console.error("[generate-images] ERRO: Stream finalizado mas não retornou nenhuma data (imagem). Total de chunks processados:", chunkCount);
+    console.error("[generate-image] Stream finalizado sem retornar imagem.");
     return null;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[generate-images] exception grave ao tentar chamar ai.models.generateContentStream:", msg);
-    if (e instanceof Error && e.stack) {
-      console.error(e.stack);
-    }
+    console.error("[generate-image]", e instanceof Error ? e.message : String(e));
     return null;
   }
 }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  console.log(`\n======================================================\n`);
-  console.log(`[generate-images POST] Nova requisição recebida. ID do carrossel:`, params?.id);
-  
   const session = await getSessionUser();
-  if (!session) {
-    console.warn(`[generate-images POST] Requisição rejeitada. Usuário não autenticado.`);
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { id } = params;
 
@@ -252,30 +233,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await req.json();
-    console.log(`[generate-images POST] Body processado. slideIndex:`, body.slideIndex, "useFace:", body.useFace, "elementId:", body.elementId);
     slideIndex = Number(body.slideIndex);
     useFace = body.useFace !== false;
     elementId = body.elementId;
     customPrompt = typeof body.customPrompt === "string" && body.customPrompt.trim() ? body.customPrompt.trim() : undefined;
-  } catch (e) {
-    console.error(`[generate-images POST] Erro ao processar JSON body:`, e);
+  } catch {
     return NextResponse.json({ error: "Body JSON inválido." }, { status: 400 });
   }
 
-  console.log(`[generate-images POST] Conectando ao MongoDB...`);
   await connectDB();
 
   const carousel = await Carousel.findOne({ _id: id, userId: session.userId });
-  if (!carousel) {
-    console.warn(`[generate-images POST] Carrossel não encontrado. ID: ${id}, UserId: ${session.userId}`);
-    return NextResponse.json({ error: "Carrossel não encontrado." }, { status: 404 });
-  }
+  if (!carousel) return NextResponse.json({ error: "Carrossel não encontrado." }, { status: 404 });
 
   const user = await User.findById(session.userId).select(
-    "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag +faceReferenceImages hasGeminiKey"
+    "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag +faceReferenceImages hasGeminiKey imageModel"
   );
   if (!user || !user.hasGeminiKey) {
-    console.warn(`[generate-images POST] Usuário não possui Gemini Key configurada. UserId: ${session.userId}`);
     return NextResponse.json({ error: "Gemini API Key não configurada." }, { status: 422 });
   }
 
@@ -286,8 +260,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       iv: user.geminiKeyIv!,
       authTag: user.geminiKeyAuthTag!,
     });
-  } catch (e) {
-    console.error(`[generate-images POST] Falha ao descriptografar API Key:`, e);
+  } catch {
     return NextResponse.json({ error: "Falha ao descriptografar a API Key." }, { status: 500 });
   }
 
@@ -301,7 +274,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const totalSlides = carousel.slides.length;
 
   if (slideIndex < 0 || slideIndex >= totalSlides) {
-    console.warn(`[generate-images POST] Índice de slide inválido: ${slideIndex}. Total slides: ${totalSlides}`);
     return NextResponse.json({ error: "Índice de slide inválido." }, { status: 400 });
   }
 
@@ -339,39 +311,42 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     siblingPrompts as string[]
   );
 
-  console.log(`[generate-images POST] Iniciando chamada para generateImage... Slide [${slideIndex}]${elementId ? ` Element [${elementId}]` : ""}`);
-  const url = await generateImage(promptText, geminiApiKey, faceImages, hasFaceRef);
-  console.log(`[generate-images POST] Retorno do generateImage recebido. URL is valid?`, !!url);
-  
+  const url = await generateImage(promptText, geminiApiKey, faceImages, hasFaceRef, user.imageModel || DEFAULT_IMAGE_MODEL);
+
   if (url) {
-    // Generate small thumbnail for dashboard preview (avoids 32MB MongoDB sort limit)
-    const thumb = await createThumbnail(url);
+    let finalUrl = url;
+    let thumbUrl: string | undefined;
+
+    try {
+      finalUrl = await uploadToImgbb(url);
+      thumbUrl = finalUrl.replace(/(\.\w+)$/, 'm$1');
+    } catch (e) {
+      console.error("[generate-image] ImgBB upload falhou, usando base64:", e instanceof Error ? e.message : String(e));
+      thumbUrl = (await createThumbnail(url)) || undefined;
+      finalUrl = url;
+    }
 
     if (elementId) {
-      console.log(`[generate-images POST] Salvando URL no MongoDB para slideIndex ${slideIndex} elemento ${elementId}...`);
       const elIdx = slide.elements.findIndex(e => e.id === elementId);
       if (elIdx !== -1) {
-        slide.elements[elIdx].imageUrl = url;
-        slide.elements[elIdx].photoUrl = url;
+        slide.elements[elIdx].imageUrl = finalUrl;
+        slide.elements[elIdx].photoUrl = finalUrl;
       }
     } else {
-      console.log(`[generate-images POST] Salvando URL no MongoDB para slideIndex ${slideIndex} fundo...`);
-      carousel.slides[slideIndex].bgImageUrl = url;
-      if (thumb) carousel.slides[slideIndex].bgThumbUrl = thumb;
+      carousel.slides[slideIndex].bgImageUrl = finalUrl;
+      if (thumbUrl) carousel.slides[slideIndex].bgThumbUrl = thumbUrl;
     }
-    
+
     carousel.markModified("slides");
-    
-    // Check for completion logic (optional, keep as is for background completion)
+
     const pendingImages = carousel.imageSlides?.filter((idx) => !carousel.slides[idx]?.bgImageUrl && idx !== slideIndex);
     if (!pendingImages || pendingImages.length === 0) {
       carousel.status = "ready";
     }
-    
+
     await carousel.save();
-    return NextResponse.json({ url, thumb: thumb || undefined });
+    return NextResponse.json({ url: finalUrl, thumb: thumbUrl });
   }
 
-  console.warn(`[generate-images POST] Retornando erro porque o URL da imagem foi NULL (Falha na geração).`);
   return NextResponse.json({ error: "Falha na geração de imagem" }, { status: 500 });
 }

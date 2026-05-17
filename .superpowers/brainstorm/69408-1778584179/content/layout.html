@@ -1,0 +1,161 @@
+<h2>Qual estrutura de layout para o editor?</h2>
+<p class="subtitle">Cada opção muda onde ficam o chat IA, thumbnails e painel de propriedades</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0a0a14;">
+      <div style="display:grid;grid-template-rows:36px 1fr;grid-template-columns:180px 1fr 220px;height:260px;gap:1px;background:#222;border-radius:8px;overflow:hidden;font-size:9px;font-family:monospace;">
+        <!-- topbar -->
+        <div style="grid-column:1/-1;background:#111;display:flex;align-items:center;padding:0 10px;gap:8px;color:#888;">
+          <div style="width:22px;height:22px;background:#6C27BE;border-radius:5px;"></div>
+          <div style="flex:1;background:#1a1a28;border-radius:4px;height:18px;"></div>
+          <div style="width:60px;height:22px;background:#6C27BE;border-radius:5px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;">Salvar</div>
+        </div>
+        <!-- left: vertical slide list -->
+        <div style="background:#0d0d1a;display:flex;flex-direction:column;gap:4px;padding:8px;overflow:hidden;">
+          <div style="font-size:8px;color:#555;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">SLIDES</div>
+          <div style="border-radius:5px;border:1.5px solid #A855F7;overflow:hidden;aspect-ratio:4/5;background:#1a1030;"></div>
+          <div style="border-radius:5px;border:1px solid #333;overflow:hidden;aspect-ratio:4/5;background:#111;"></div>
+          <div style="border-radius:5px;border:1px solid #333;overflow:hidden;aspect-ratio:4/5;background:#111;"></div>
+          <div style="border-radius:5px;border:1px dashed #333;overflow:hidden;aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;color:#444;">+</div>
+        </div>
+        <!-- center: canvas -->
+        <div style="background:#08080f;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+          <div style="width:90px;height:112px;background:#1a1030;border-radius:6px;border:1.5px solid #A855F7;box-shadow:0 4px 20px rgba(168,85,247,.3);"></div>
+        </div>
+        <!-- right: context panel (AI + props tabs) -->
+        <div style="background:#0d0d1a;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;border-bottom:1px solid #222;">
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#A855F7;border-bottom:1.5px solid #A855F7;">IA</div>
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#555;">Design</div>
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#555;">Fundo</div>
+          </div>
+          <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px;">
+            <div style="background:#1a1030;border:1px solid #2a1a40;border-radius:5px;padding:6px;font-size:7px;color:#888;line-height:1.4;">Olá! Como posso editar o carrossel?</div>
+            <div style="background:#2a1a40;border:1px solid #A855F740;border-radius:5px;padding:6px;font-size:7px;color:#ccc;line-height:1.4;align-self:flex-end;">Mude o título para azul</div>
+          </div>
+          <div style="padding:6px;border-top:1px solid #222;display:flex;gap:4px;">
+            <div style="flex:1;background:#111;border:1px solid #333;border-radius:5px;height:22px;"></div>
+            <div style="width:22px;height:22px;background:#6C27BE;border-radius:5px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Unified Context Panel</h3>
+      <p>Thumbnails verticais à esquerda. Painel direito único com abas: IA Chat / Design / Fundo / Camadas. Toolbar minimalista no topo. Canvas focado no centro.</p>
+      <p style="margin-top:8px;color:#A855F7;font-size:12px;">✦ Recomendado — foco no canvas, IA e props no mesmo lugar</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0a0a14;">
+      <div style="display:grid;grid-template-rows:36px 1fr 100px;grid-template-columns:48px 1fr 220px;height:260px;gap:1px;background:#222;border-radius:8px;overflow:hidden;font-size:9px;font-family:monospace;">
+        <!-- topbar -->
+        <div style="grid-column:1/-1;background:#111;display:flex;align-items:center;padding:0 10px;gap:8px;color:#888;">
+          <div style="width:22px;height:22px;background:#6C27BE;border-radius:5px;"></div>
+          <div style="flex:1;background:#1a1a28;border-radius:4px;height:18px;"></div>
+          <div style="width:60px;height:22px;background:#6C27BE;border-radius:5px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;">Salvar</div>
+        </div>
+        <!-- left toolbar (icons only) -->
+        <div style="background:#0d0d1a;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;">
+          <div style="width:28px;height:28px;background:#1a1030;border-radius:6px;border:1px solid #A855F7;"></div>
+          <div style="width:28px;height:28px;background:#111;border-radius:6px;border:1px solid #333;"></div>
+          <div style="width:28px;height:28px;background:#111;border-radius:6px;border:1px solid #333;"></div>
+          <div style="width:28px;height:28px;background:#111;border-radius:6px;border:1px solid #333;"></div>
+          <div style="height:1px;background:#222;width:80%;"></div>
+          <div style="width:28px;height:28px;background:#111;border-radius:6px;border:1px solid #333;"></div>
+        </div>
+        <!-- center canvas -->
+        <div style="background:#08080f;display:flex;align-items:center;justify-content:center;">
+          <div style="width:90px;height:112px;background:#1a1030;border-radius:6px;border:1.5px solid #A855F7;box-shadow:0 4px 20px rgba(168,85,247,.3);"></div>
+        </div>
+        <!-- right props -->
+        <div style="background:#0d0d1a;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="display:flex;border-bottom:1px solid #222;">
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#A855F7;border-bottom:1.5px solid #A855F7;">Design</div>
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#555;">Fundo</div>
+            <div style="flex:1;padding:6px;text-align:center;font-size:8px;color:#555;">Layers</div>
+          </div>
+          <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:5px;">
+            <div style="height:6px;background:#222;border-radius:3px;"></div>
+            <div style="height:6px;background:#1a1030;border-radius:3px;width:70%;"></div>
+            <div style="height:30px;background:#111;border:1px solid #333;border-radius:5px;margin-top:4px;"></div>
+            <div style="height:6px;background:#222;border-radius:3px;margin-top:4px;"></div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;">
+              <div style="aspect-ratio:1;background:#222;border-radius:4px;"></div>
+              <div style="aspect-ratio:1;background:#6C27BE;border-radius:4px;"></div>
+              <div style="aspect-ratio:1;background:#F97316;border-radius:4px;"></div>
+              <div style="aspect-ratio:1;background:#222;border-radius:4px;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- bottom AI chat bar -->
+        <div style="grid-column:1/-1;background:#0a0a18;border-top:1px solid #222;display:flex;align-items:center;gap:8px;padding:8px 12px;">
+          <div style="width:24px;height:24px;background:linear-gradient(135deg,#6C27BE,#A855F7);border-radius:6px;flex-shrink:0;"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <div style="height:5px;background:#1a1030;border-radius:3px;width:60%;"></div>
+            <div style="height:5px;background:#111;border-radius:3px;width:40%;"></div>
+          </div>
+          <div style="background:#111;border:1px solid #333;border-radius:6px;flex:1;height:28px;"></div>
+          <div style="width:28px;height:28px;background:#6C27BE;border-radius:6px;flex-shrink:0;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — AI Chat em baixo (estilo Cursor)</h3>
+      <p>Toolbar ícones à esquerda (estreito). Canvas principal. Props panel à direita. Chat IA como barra persistente na parte inferior — sempre acessível sem ocupar espaço lateral.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0a0a14;">
+      <div style="display:grid;grid-template-rows:36px 1fr;grid-template-columns:220px 1fr;height:260px;gap:1px;background:#222;border-radius:8px;overflow:hidden;font-size:9px;font-family:monospace;">
+        <!-- topbar -->
+        <div style="grid-column:1/-1;background:#111;display:flex;align-items:center;padding:0 10px;gap:8px;color:#888;">
+          <div style="width:22px;height:22px;background:#6C27BE;border-radius:5px;"></div>
+          <div style="flex:1;background:#1a1a28;border-radius:4px;height:18px;"></div>
+          <div style="width:60px;height:22px;background:#6C27BE;border-radius:5px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;">Salvar</div>
+        </div>
+        <!-- left mega panel -->
+        <div style="background:#0d0d1a;display:flex;flex-direction:column;overflow:hidden;">
+          <!-- mini tabs -->
+          <div style="display:flex;border-bottom:1px solid #222;">
+            <div style="padding:5px 7px;font-size:7px;color:#A855F7;border-bottom:1.5px solid #A855F7;">Slides</div>
+            <div style="padding:5px 7px;font-size:7px;color:#555;">IA</div>
+            <div style="padding:5px 7px;font-size:7px;color:#555;">Props</div>
+          </div>
+          <!-- slide strip + tools -->
+          <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <div style="border-radius:5px;border:1.5px solid #A855F7;overflow:hidden;aspect-ratio:4/5;background:#1a1030;"></div>
+              <div style="border-radius:5px;border:1px solid #333;overflow:hidden;aspect-ratio:4/5;background:#111;"></div>
+              <div style="border-radius:5px;border:1px solid #333;overflow:hidden;aspect-ratio:4/5;background:#111;"></div>
+              <div style="border-radius:5px;border:1px dashed #333;overflow:hidden;aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;color:#444;">+</div>
+            </div>
+            <div style="margin-top:6px;height:1px;background:#222;"></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px;">
+              <div style="width:26px;height:26px;background:#111;border-radius:5px;border:1px solid #333;"></div>
+              <div style="width:26px;height:26px;background:#111;border-radius:5px;border:1px solid #333;"></div>
+              <div style="width:26px;height:26px;background:#111;border-radius:5px;border:1px solid #333;"></div>
+              <div style="width:26px;height:26px;background:#111;border-radius:5px;border:1px solid #333;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- right: canvas only (big) -->
+        <div style="background:#08080f;display:flex;align-items:center;justify-content:center;">
+          <div style="width:110px;height:138px;background:#1a1030;border-radius:6px;border:1.5px solid #A855F7;box-shadow:0 4px 20px rgba(168,85,247,.3);"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Painel esquerdo unificado (slides + tools)</h3>
+      <p>Painel esquerdo largo com abas: Slides / IA / Props. Canvas ocupa toda a área direita sem painel separado à direita. Máximo espaço de trabalho para o canvas.</p>
+    </div>
+  </div>
+
+</div>

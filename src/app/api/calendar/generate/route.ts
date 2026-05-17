@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
 
-  const user = await User.findById(session.userId).select("+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey");
+  const user = await User.findById(session.userId).select("+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey textModel");
   if (!user?.hasGeminiKey) {
     return NextResponse.json({ error: "Configure sua Gemini API Key em Configurações primeiro." }, { status: 422 });
   }
@@ -83,7 +83,7 @@ Responda APENAS com JSON válido, sem markdown:
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: user.textModel || "gemini-2.0-flash" });
     const result = await model.generateContent(prompt);
     const rawText = result.response.text().trim();
     const jsonText = rawText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");

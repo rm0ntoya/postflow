@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Editor Redesign — Full Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #030308; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .page-header { background: #0a0a18; border-bottom: 1px solid rgba(168,85,247,.2); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; background: linear-gradient(135deg, #A855F7, #F97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .page-header p { font-size: 13px; color: rgba(255,255,255,.45); margin-top: 2px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3); color: #C4B5FD; font-size: 12px; }
+  .badge span { width: 6px; height: 6px; border-radius: 50%; background: #A855F7; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+  /* ── SECTION LABELS ── */
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(168,85,247,.7); padding: 28px 32px 12px; }
+
+  /* ── EDITOR SHELL ── */
+  .editor-shell { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 200px 1fr 260px; height: 580px; background: #06060F; margin: 0 24px 32px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.06); box-shadow: 0 32px 80px rgba(0,0,0,.6); }
+
+  /* ── TOPBAR (merged toolbar) ── */
+  .topbar { grid-column: 1 / -1; background: #0b0b1a; border-bottom: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; padding: 0 14px; gap: 0; position: relative; z-index: 20; }
+
+  .tb-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .tb-back { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: rgba(255,255,255,.5); cursor: pointer; transition: all .15s; }
+  .tb-back:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .tb-title { font-size: 13px; font-weight: 500; color: #fff; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; letter-spacing: -0.01em; cursor: text; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .tb-title:hover { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.04); }
+  .tb-meta { font-size: 10px; color: rgba(255,255,255,.25); white-space: nowrap; }
+  .tb-divider { width: 1px; height: 20px; background: rgba(255,255,255,.08); margin: 0 10px; flex-shrink: 0; }
+
+  .tb-tools { display: flex; align-items: center; gap: 1px; position: absolute; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 3px; }
+  .tool { width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.45); cursor: pointer; transition: all .15s; position: relative; }
+  .tool:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.8); }
+  .tool.active { background: rgba(168,85,247,.18); color: #C4B5FD; }
+  .tool svg { width: 15px; height: 15px; }
+  .tool-sep { width: 1px; height: 16px; background: rgba(255,255,255,.08); margin: 0 2px; }
+
+  .tb-right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .view-toggle { display: flex; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 7px; padding: 2px; gap: 1px; }
+  .vt-btn { width: 26px; height: 26px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.35); cursor: pointer; font-size: 9px; }
+  .vt-btn.on { background: rgba(168,85,247,.2); color: #C4B5FD; }
+  .zoom-ctrl { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 7px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); font-size: 11px; color: rgba(255,255,255,.5); }
+  .zoom-ctrl button { color: rgba(255,255,255,.4); font-size: 13px; line-height: 1; cursor: pointer; }
+  .zoom-ctrl button:hover { color: #fff; }
+  .action-btn { height: 30px; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: all .15s; border: 1px solid; }
+  .action-btn.ghost { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); color: rgba(255,255,255,.6); }
+  .action-btn.ghost:hover { color: #fff; background: rgba(255,255,255,.07); }
+  .action-btn.pri { background: linear-gradient(135deg, #6C27BE, #A855F7); border-color: transparent; color: #fff; box-shadow: 0 2px 12px rgba(108,39,190,.35); }
+  .action-btn svg { width: 12px; height: 12px; }
+
+  /* ── LEFT SIDEBAR ── */
+  .sidebar-left { background: #0a0a18; border-right: 1px solid rgba(255,255,255,.05); display: flex; flex-direction: column; overflow: hidden; }
+  .sl-header { padding: 14px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .sl-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.3); }
+  .sl-count { font-size: 10px; color: rgba(255,255,255,.2); background: rgba(255,255,255,.05); padding: 2px 7px; border-radius: 999px; }
+  .sl-thumbs { flex: 1; overflow-y: auto; padding: 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .sl-thumbs::-webkit-scrollbar { width: 4px; }
+  .sl-thumbs::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 999px; }
+  .thumb-wrap { position: relative; cursor: pointer; }
+  .thumb-num { position: absolute; top: 4px; left: 5px; font-size: 8px; color: rgba(255,255,255,.5); background: rgba(0,0,0,.5); padding: 1px 5px; border-radius: 999px; z-index: 2; font-family: monospace; }
+  .thumb-frame { width: 100%; aspect-ratio: 4/5; border-radius: 7px; border: 1.5px solid rgba(255,255,255,.08); overflow: hidden; background: #111; transition: all .15s; position: relative; }
+  .thumb-wrap.sel .thumb-frame { border-color: #A855F7; box-shadow: 0 0 0 2px rgba(168,85,247,.2), 0 4px 16px rgba(0,0,0,.4); }
+  .thumb-frame-bg { position: absolute; inset: 0; }
+  .thumb-actions { position: absolute; top: 4px; right: 4px; display: none; gap: 3px; z-index: 3; }
+  .thumb-wrap:hover .thumb-actions { display: flex; }
+  .thumb-act { width: 18px; height: 18px; border-radius: 4px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.7); font-size: 9px; cursor: pointer; }
+  .thumb-add { width: 100%; aspect-ratio: 4/5; border-radius: 7px; border: 1.5px dashed rgba(255,255,255,.1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: rgba(255,255,255,.25); cursor: pointer; transition: all .15s; font-size: 10px; }
+  .thumb-add:hover { border-color: rgba(168,85,247,.4); color: #A855F7; background: rgba(168,85,247,.04); }
+  .thumb-add svg { width: 16px; height: 16px; }
+
+  /* ── CANVAS ── */
+  .canvas-area { background: radial-gradient(ellipse at 30% 20%, rgba(108,39,190,.06) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(249,115,22,.04) 0%, transparent 60%), #070710; overflow: auto; position: relative; display: flex; align-items: center; justify-content: center; }
+  .canvas-area::-webkit-scrollbar { width: 8px; height: 8px; }
+  .canvas-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 999px; }
+
+  .slide-isolated { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .slide-frame-wrap { position: relative; }
+  .slide-num-label { font-size: 10px; color: rgba(255,255,255,.3); letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+  .slide-num-label span { width: 5px; height: 5px; border-radius: 50%; background: #A855F7; }
+  .slide-frame { width: 200px; height: 250px; border-radius: 12px; position: relative; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); border: 2px solid #A855F7; }
+  .slide-bg { position: absolute; inset: 0; background: linear-gradient(160deg, #1a0e30 0%, #0d0820 60%, #0a0618 100%); }
+  .slide-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%); }
+  .slide-content { position: absolute; bottom: 20px; left: 16px; right: 16px; }
+  .slide-el-title { height: 8px; background: rgba(255,255,255,.9); border-radius: 4px; width: 85%; margin-bottom: 6px; }
+  .slide-el-sub { height: 5px; background: rgba(255,255,255,.35); border-radius: 3px; width: 60%; margin-bottom: 4px; }
+  .slide-el-accent { height: 5px; background: #A855F7; border-radius: 3px; width: 40%; }
+  .slide-el-selected { position: absolute; top: 16px; left: 16px; right: 16px; height: 40px; border-radius: 6px; border: 2px solid #A855F7; background: rgba(168,85,247,.08); }
+  .handle { position: absolute; width: 8px; height: 8px; background: #fff; border: 1.5px solid #A855F7; border-radius: 2px; }
+  .handle.tl { top: -4px; left: -4px; }
+  .handle.tr { top: -4px; right: -4px; }
+  .handle.bl { bottom: -4px; left: -4px; }
+  .handle.br { bottom: -4px; right: -4px; }
+
+  .slide-regen-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: rgba(255,255,255,.5); font-size: 11px; cursor: pointer; transition: all .15s; }
+  .slide-regen-btn:hover { color: #fff; border-color: rgba(168,85,247,.4); background: rgba(168,85,247,.06); }
+  .slide-regen-btn svg { width: 12px; height: 12px; }
+
+  /* ── FLOATING AI FAB ── */
+  .fab-wrap { position: absolute; bottom: 20px; right: 20px; z-index: 30; }
+  .fab-btn { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #6C27BE, #A855F7); box-shadow: 0 4px 20px rgba(168,85,247,.5), 0 0 0 0 rgba(168,85,247,.3); display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; position: relative; transition: all .2s; animation: fab-glow 3s infinite; }
+  @keyframes fab-glow { 0%,100%{ box-shadow: 0 4px 20px rgba(168,85,247,.5); } 50%{ box-shadow: 0 4px 28px rgba(168,85,247,.7), 0 0 0 6px rgba(168,85,247,.08); } }
+  .fab-btn svg { width: 18px; height: 18px; color: #fff; }
+  .fab-dot { position: absolute; top: 1px; right: 1px; width: 11px; height: 11px; border-radius: 50%; background: #4ADE80; border: 2px solid #070710; }
+
+  .chat-popup { position: absolute; bottom: 54px; right: 0; width: 300px; background: #0d0d1e; border: 1px solid rgba(168,85,247,.2); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(168,85,247,.05); overflow: hidden; }
+  .chat-popup-header { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.05); display: flex; align-items: center; gap: 10px; background: rgba(168,85,247,.06); }
+  .chat-icon { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #6C27BE, #A855F7); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .chat-icon svg { width: 14px; height: 14px; color: #fff; }
+  .chat-title { font-size: 12px; font-weight: 600; color: #fff; }
+  .chat-sub { font-size: 10px; color: rgba(255,255,255,.4); }
+  .chat-close { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.4); cursor: pointer; font-size: 11px; }
+
+  .chat-msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+  .msg-ai { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 10px 10px 10px 3px; padding: 8px 10px; font-size: 11px; color: rgba(255,255,255,.65); line-height: 1.55; }
+  .msg-user { background: rgba(168,85,247,.16); border: 1px solid rgba(168,85,247,.25); border-radius: 10px 10px 3px 10px; padding: 8px 10px; font-size: 11px; color: #fff; line-height: 1.55; align-self: flex-end; max-width: 85%; }
+  .msg-action { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 5px; background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.2); color: #4ADE80; font-size: 9px; margin-top: 4px; }
+  .msg-streaming { font-size: 11px; color: rgba(255,255,255,.5); }
+  .cursor { display: inline-block; width: 5px; height: 11px; background: #A855F7; border-radius: 2px; margin-left: 2px; vertical-align: middle; animation: blink .8s infinite; }
+  @keyframes blink { 50%{opacity:0} }
+
+  .chat-input-area { padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.05); display: flex; gap: 8px; align-items: flex-end; }
+  .chat-textarea { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 9px; padding: 7px 10px; font-size: 11px; color: #fff; resize: none; font-family: inherit; line-height: 1.4; height: 34px; }
+  .chat-textarea:focus { outline: none; border-color: rgba(168,85,247,.4); }
+  .chat-send-btn { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #6C27BE, #A855F7); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none; cursor: pointer; }
+  .chat-send-btn svg { width: 13px; height: 13px; color: #fff; }
+
+  /* ── RIGHT PROPS PANEL ── */
+  .props-panel { background: #0a0a18; border-left: 1px solid rgba(255,255,255,.05); display: flex; flex-direction: column; overflow: hidden; }
+  .pp-tabs { display: flex; background: rgba(0,0,0,.2); border-bottom: 1px solid rgba(255,255,255,.05); }
+  .pp-tab { flex: 1; padding: 10px 4px; font-size: 11px; font-weight: 400; color: rgba(255,255,255,.35); text-align: center; cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+  .pp-tab:hover { color: rgba(255,255,255,.65); }
+  .pp-tab.on { color: #C4B5FD; border-bottom-color: #A855F7; background: rgba(168,85,247,.05); }
+
+  .pp-body { flex: 1; overflow-y: auto; padding: 0; }
+  .pp-body::-webkit-scrollbar { width: 4px; }
+  .pp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 999px; }
+
+  .pp-section { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,.04); }
+  .pp-section:last-child { border-bottom: none; }
+  .pp-section-title { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.25); margin-bottom: 10px; }
+
+  .pp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .pp-row:last-child { margin-bottom: 0; }
+  .pp-lbl { font-size: 10px; color: rgba(255,255,255,.4); width: 52px; flex-shrink: 0; }
+  .pp-input { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 7px; padding: 6px 9px; font-size: 11px; color: #fff; }
+  .pp-input:focus { outline: none; border-color: rgba(168,85,247,.4); }
+  .pp-select { flex: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 7px; padding: 6px 9px; font-size: 11px; color: rgba(255,255,255,.7); appearance: none; }
+
+  .font-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+  .font-tile { padding: 8px 10px; border-radius: 7px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); font-size: 13px; color: #fff; cursor: pointer; transition: all .15s; }
+  .font-tile:hover { border-color: rgba(255,255,255,.12); }
+  .font-tile.on { border-color: rgba(168,85,247,.5); background: rgba(168,85,247,.08); }
+  .font-tile small { display: block; font-size: 9px; color: rgba(255,255,255,.3); letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; font-family: system-ui; }
+
+  .color-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-bottom: 8px; }
+  .color-sw { aspect-ratio: 1; border-radius: 6px; border: 1.5px solid rgba(255,255,255,.06); cursor: pointer; transition: transform .15s; }
+  .color-sw:hover { transform: scale(1.1); }
+  .color-sw.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(168,85,247,.5); }
+
+  .align-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .align-btn { padding: 6px; border-radius: 6px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); color: rgba(255,255,255,.4); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; }
+  .align-btn:hover { color: #fff; }
+  .align-btn.on { background: rgba(168,85,247,.15); border-color: rgba(168,85,247,.35); color: #C4B5FD; }
+
+  .slider-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+  input[type="range"] { flex: 1; -webkit-appearance: none; height: 3px; background: rgba(255,255,255,.1); border-radius: 999px; outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #A855F7; border: 2px solid #fff; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .slider-val { font-size: 10px; font-family: monospace; color: rgba(255,255,255,.7); width: 28px; text-align: right; }
+
+  .del-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 8px; background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.15); color: rgba(252,165,165,.7); font-size: 11px; cursor: pointer; transition: all .15s; }
+  .del-btn:hover { background: rgba(239,68,68,.12); color: #fca5a5; }
+
+  /* ── ANNOTATIONS ── */
+  .annotations { padding: 0 24px 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .ann { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 16px; }
+  .ann-icon { font-size: 20px; margin-bottom: 8px; }
+  .ann-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ann-desc { font-size: 12px; color: rgba(255,255,255,.45); line-height: 1.55; }
+
+  /* ── APPROVE ── */
+  .approve-wrap { padding: 0 24px 40px; display: flex; gap: 12px; }
+  .approve-btn { flex: 1; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all .2s; }
+  .approve-btn.yes { background: linear-gradient(135deg, #6C27BE, #A855F7); color: #fff; border: none; box-shadow: 0 4px 20px rgba(108,39,190,.4); }
+  .approve-btn.yes:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(108,39,190,.5); }
+  .approve-btn.tweak { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+  .approve-btn.tweak:hover { background: rgba(255,255,255,.07); color: #fff; }
+
+  .selected-indicator { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0d0d1e; border: 1px solid rgba(168,85,247,.3); border-radius: 999px; padding: 10px 20px; font-size: 13px; color: #C4B5FD; display: none; align-items: center; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 100; }
+  .selected-indicator.show { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>NovaCraft Editor — Redesign</h1>
+    <p>Preview completo do novo layout. Revise cada seção antes de aprovar.</p>
+  </div>
+  <div class="badge"><span></span> Mockup interativo</div>
+</div>
+
+<div class="section-label">1. Layout Geral + Topbar Unificada</div>
+
+<div class="editor-shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="tb-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <input class="tb-title" value="Mindset de Alto Desempenho"/>
+      <span class="tb-meta">1080 × 1350</span>
+    </div>
+
+    <!-- centered tools -->
+    <div class="tb-tools">
+      <div class="tool active" title="Selecionar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 20 2-8 8-2L2 2z"/></svg>
+      </div>
+      <div class="tool-sep"></div>
+      <div class="tool" title="Texto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </div>
+      <div class="tool" title="Imagem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </div>
+      <div class="tool" title="Forma">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <div class="tool" title="Perfil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="tool-sep"></div>
+      <div class="tool" title="Desfazer" style="opacity:.35;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      </div>
+    </div>
+
+    <div class="tb-right">
+      <div class="view-toggle" title="Modo de visualização">
+        <div class="vt-btn on" title="Slide isolado">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        </div>
+        <div class="vt-btn" title="Todos os slides">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="6" height="12" rx="1"/><rect x="10" y="6" width="6" height="12" rx="1"/><rect x="18" y="6" width="4" height="12" rx="1"/></svg>
+        </div>
+      </div>
+      <div class="zoom-ctrl">
+        <button>−</button>
+        <span>38%</span>
+        <button>+</button>
+      </div>
+      <button class="action-btn ghost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar
+      </button>
+      <button class="action-btn pri">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar-left">
+    <div class="sl-header">
+      <span class="sl-label">Slides</span>
+      <span class="sl-count">4</span>
+    </div>
+    <div class="sl-thumbs">
+      <!-- Slide 1 selected -->
+      <div class="thumb-wrap sel">
+        <span class="thumb-num">01</span>
+        <div class="thumb-frame">
+          <div class="thumb-frame-bg" style="background:linear-gradient(160deg,#1a0e30,#0d0820);"></div>
+          <div style="position:absolute;bottom:8px;left:8px;right:8px;">
+            <div style="height:4px;background:rgba(255,255,255,.8);border-radius:2px;width:85%;margin-bottom:3px;"></div>
+            <div style="height:3px;background:rgba(255,255,255,.3);border-radius:2px;width:60%;"></div>
+          </div>
+        </div>
+        <div class="thumb-actions">
+          <div class="thumb-act">⧉</div>
+          <div class="thumb-act" style="color:#fca5a5;">✕</div>
+        </div>
+      </div>
+      <!-- Slide 2 -->
+      <div class="thumb-wrap">
+        <span class="thumb-num">02</span>
+        <div class="thumb-frame">
+          <div class="thumb-frame-bg" style="background:linear-gradient(160deg,#0e1a30,#081018);"></div>
+          <div style="position:absolute;bottom:8px;left:8px;right:8px;">
+            <div style="height:4px;background:rgba(255,255,255,.8);border-radius:2px;width:70%;margin-bottom:3px;"></div>
+            <div style="height:3px;background:rgba(255,255,255,.3);border-radius:2px;width:50%;margin-bottom:3px;"></div>
+            <div style="height:3px;background:#A855F7;border-radius:2px;width:35%;"></div>
+          </div>
+        </div>
+        <div class="thumb-actions">
+          <div class="thumb-act">⧉</div>
+          <div class="thumb-act" style="color:#fca5a5;">✕</div>
+        </div>
+      </div>
+      <!-- Slide 3 -->
+      <div class="thumb-wrap">
+        <span class="thumb-num">03</span>
+        <div class="thumb-frame">
+          <div class="thumb-frame-bg" style="background:linear-gradient(160deg,#1a1000,#180e00);"></div>
+          <div style="position:absolute;bottom:8px;left:8px;right:8px;">
+            <div style="height:4px;background:rgba(255,255,255,.8);border-radius:2px;width:80%;margin-bottom:3px;"></div>
+            <div style="height:3px;background:rgba(255,255,255,.3);border-radius:2px;width:55%;"></div>
+          </div>
+        </div>
+        <div class="thumb-actions">
+          <div class="thumb-act">⧉</div>
+          <div class="thumb-act" style="color:#fca5a5;">✕</div>
+        </div>
+      </div>
+      <!-- Slide 4 CTA -->
+      <div class="thumb-wrap">
+        <span class="thumb-num">04</span>
+        <div class="thumb-frame">
+          <div class="thumb-frame-bg" style="background:linear-gradient(160deg,#1a0a30,#12061a);"></div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+            <div style="width:50%;height:16px;background:linear-gradient(135deg,#6C27BE,#A855F7);border-radius:4px;opacity:.8;"></div>
+          </div>
+        </div>
+        <div class="thumb-actions">
+          <div class="thumb-act">⧉</div>
+          <div class="thumb-act" style="color:#fca5a5;">✕</div>
+        </div>
+      </div>
+      <!-- Add -->
+      <div class="thumb-add">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="slide-isolated">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="slide-num-label"><span></span> Slide 01 — Capa</div>
+      </div>
+      <div class="slide-frame-wrap">
+        <div class="slide-frame">
+          <div class="slide-bg"></div>
+          <div class="slide-overlay"></div>
+          <!-- selected element -->
+          <div class="slide-el-selected">
+            <div class="handle tl"></div>
+            <div class="handle tr"></div>
+            <div class="handle bl"></div>
+            <div class="handle br"></div>
+          </div>
+          <div class="slide-content">
+            <div class="slide-el-title"></div>
+            <div class="slide-el-sub"></div>
+            <div class="slide-el-accent"></div>
+          </div>
+        </div>
+      </div>
+      <button class="slide-regen-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Gerar imagem de fundo
+      </button>
+    </div>
+
+    <!-- FAB + Chat -->
+    <div class="fab-wrap">
+      <div class="chat-popup">
+        <div class="chat-popup-header">
+          <div class="chat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div>
+            <div class="chat-title">Agente IA</div>
+            <div class="chat-sub">Edite por texto</div>
+          </div>
+          <div class="chat-close">✕</div>
+        </div>
+        <div class="chat-msgs">
+          <div class="msg-ai">Olá! Me diga o que quer mudar no carrossel — posso editar textos, cores, fundos e muito mais.</div>
+          <div class="msg-user">Mude o título do slide 1 para azul</div>
+          <div class="msg-ai">Feito! Alterei a cor do título para azul.<br><div class="msg-action">✦ editText aplicado</div></div>
+          <div class="msg-ai">
+            <span class="msg-streaming">Analisando o carrossel</span><span class="cursor"></span>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <textarea class="chat-textarea" placeholder="Ex: mude o fundo do slide 2..."></textarea>
+          <button class="chat-send-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="fab-btn" style="opacity:.6;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div class="fab-dot"></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT PROPS -->
+  <div class="props-panel">
+    <div class="pp-tabs">
+      <div class="pp-tab on">Design</div>
+      <div class="pp-tab">Fundo</div>
+      <div class="pp-tab">Camadas</div>
+    </div>
+    <div class="pp-body">
+      <div class="pp-section">
+        <div class="pp-section-title">Texto</div>
+        <textarea class="pp-input" style="width:100%;min-height:64px;resize:none;font-family:inherit;line-height:1.45;" value="">Mindset de Alto Desempenho</textarea>
+      </div>
+      <div class="pp-section">
+        <div class="pp-section-title">Tipografia</div>
+        <div class="font-grid">
+          <div class="font-tile on" style="font-family:Impact;">Aa<small>Bold</small></div>
+          <div class="font-tile" style="font-family:system-ui;font-weight:300;">Aa<small>Modern</small></div>
+          <div class="font-tile" style="font-family:Georgia;">Aa<small>Editorial</small></div>
+          <div class="font-tile" style="font-family:monospace;font-size:11px;">Aa<small>Mono</small></div>
+        </div>
+        <div class="pp-row">
+          <span class="pp-lbl">Tamanho</span>
+          <div class="slider-wrap">
+            <input type="range" min="12" max="260" value="96"/>
+            <span class="slider-val">96</span>
+          </div>
+        </div>
+        <div class="pp-row">
+          <span class="pp-lbl">Alinhar</span>
+          <div class="align-row" style="flex:1;">
+            <div class="align-btn">⬅</div>
+            <div class="align-btn on">↔</div>
+            <div class="align-btn">➡</div>
+          </div>
+        </div>
+        <div class="pp-row">
+          <span class="pp-lbl">Entrelinha</span>
+          <div class="slider-wrap">
+            <input type="range" min="50" max="250" value="112"/>
+            <span class="slider-val">1.12</span>
+          </div>
+        </div>
+      </div>
+      <div class="pp-section">
+        <div class="pp-section-title">Cor</div>
+        <div class="color-grid">
+          <div class="color-sw on" style="background:#fff;"></div>
+          <div class="color-sw" style="background:#A855F7;"></div>
+          <div class="color-sw" style="background:#6C27BE;"></div>
+          <div class="color-sw" style="background:#F97316;"></div>
+          <div class="color-sw" style="background:#4ADE80;"></div>
+          <div class="color-sw" style="background:#FBBF24;"></div>
+          <div class="color-sw" style="background:#3B82F6;"></div>
+          <div class="color-sw" style="background:#000;border-color:rgba(255,255,255,.15);"></div>
+        </div>
+        <input class="pp-input" value="#FFFFFF" style="font-family:monospace;font-size:11px;width:100%;"/>
+      </div>
+      <div class="pp-section">
+        <div class="pp-section-title">Posição</div>
+        <div class="pp-row">
+          <span class="pp-lbl">X / Y</span>
+          <input class="pp-input" value="80" style="width:60px;flex:none;"/>
+          <input class="pp-input" value="500" style="width:60px;flex:none;"/>
+        </div>
+        <div class="pp-row">
+          <span class="pp-lbl">L / A</span>
+          <input class="pp-input" value="920" style="width:60px;flex:none;"/>
+          <input class="pp-input" value="180" style="width:60px;flex:none;"/>
+        </div>
+      </div>
+      <div class="pp-section">
+        <button class="del-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Excluir elemento
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section-label">2. O que muda vs. hoje</div>
+<div class="annotations">
+  <div class="ann">
+    <div class="ann-icon">🗂️</div>
+    <div class="ann-title">Thumbnails verticais</div>
+    <div class="ann-desc">Antes: barra horizontal ocultando canvas. Agora: coluna lateral, sempre visível, com ações de duplicar/deletar no hover.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-icon">🪄</div>
+    <div class="ann-title">Chat IA como FAB</div>
+    <div class="ann-desc">Chat ocupa 300px fixos hoje. No redesign é um balão flutuante — aparece quando precisar, some quando não. Canvas ganha 300px de espaço.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-icon">📐</div>
+    <div class="ann-title">Topbar unificada</div>
+    <div class="ann-desc">Toolbar + topbar fundidas numa barra única de 48px. Canvas ganha ~52px de altura. Ferramentas centralizadas, ações à direita.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-icon">🔍</div>
+    <div class="ann-title">Toggle de visualização</div>
+    <div class="ann-desc">Botão na topbar alterna entre slide isolado (foco total) e todos os slides lado a lado com scroll horizontal.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-icon">✨</div>
+    <div class="ann-title">Props panel refinado</div>
+    <div class="ann-desc">Mesmas funcionalidades, visual mais denso e limpo: inputs menores, espaçamento consistente, sem ruído visual.</div>
+  </div>
+  <div class="ann">
+    <div class="ann-icon">⚡</div>
+    <div class="ann-title">Sem mudança de lógica</div>
+    <div class="ann-desc">Todo o código de edição, drag, undo, export permanece. Só layout e estilo mudam — zero risco de regressão funcional.</div>
+  </div>
+</div>
+
+<div class="section-label">3. Aprovação</div>
+<div class="approve-wrap">
+  <button class="approve-btn yes" onclick="document.querySelector('.selected-indicator').classList.add('show');this.textContent='✓ Aprovado!';" data-choice="approve">
+    ✓ Aprovado — implementar esse design
+  </button>
+  <button class="approve-btn tweak" onclick="document.querySelector('.selected-indicator').classList.add('show');this.textContent='Ajuste solicitado';document.querySelector('.selected-indicator').textContent='↩ Ajuste solicitado — descreva no terminal';" data-choice="tweak">
+    ↩ Quero ajustar algo
+  </button>
+</div>
+
+<div class="selected-indicator">
+  ✓ Seleção registrada — responda no terminal para continuar
+</div>
+
+</body>
+</html>

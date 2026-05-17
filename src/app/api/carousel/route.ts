@@ -90,8 +90,9 @@ export async function GET() {
     ]);
 
     return NextResponse.json({ carousels });
-  } catch (error: any) {
-    console.error("[API Carousel GET] Erro:", error);
-    return NextResponse.json({ error: error.message || "Erro interno." }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Erro interno.";
+    console.error("[API Carousel GET]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

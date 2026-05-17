@@ -41,6 +41,7 @@ export interface ISlide {
   bgPositionY?: number;
   bgScale?: number;
   imagePrompt?: string;
+  useFaceForGeneration?: boolean;
   elements: IElement[];
 }
 
@@ -56,6 +57,9 @@ export interface ICarousel extends Document {
   slides: ISlide[];
   status: "draft" | "ready" | "published" | "generating" | "error";
   errorMessage?: string;
+  mode?: "news";
+  newsUrl?: string;
+  newsSource?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -105,6 +109,7 @@ const SlideSchema = new Schema<ISlide>(
     bgPositionY: { type: Number, default: 50 },
     bgScale: { type: Number, default: 1 },
     imagePrompt: String,
+    useFaceForGeneration: { type: Boolean, default: false },
     elements: [ElementSchema],
   },
   { _id: false }
@@ -127,6 +132,9 @@ const CarouselSchema = new Schema<ICarousel>(
       default: "draft",
     },
     errorMessage: String,
+    mode: { type: String, enum: ["news"] },
+    newsUrl: String,
+    newsSource: String,
   },
   { timestamps: true }
 );

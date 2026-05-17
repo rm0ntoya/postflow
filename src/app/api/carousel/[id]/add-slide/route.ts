@@ -2,31 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import Carousel, { ISlide, IElement, ISegment } from "@/models/Carousel";
+import Carousel, { ISlide, IElement } from "@/models/Carousel";
 import { getSessionUser } from "@/lib/auth";
 import { decryptApiKey } from "@/lib/encryption";
+import { CANVAS_W, CANVAS_H, parseSegments } from "@/lib/canvas";
 
 export const maxDuration = 60;
 
-const CANVAS_W = 1080;
-const CANVAS_H = 1350;
-const GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
 
 interface RouteParams { params: { id: string } }
-
-function parseSegments(title: string, accentColor: string): ISegment[] {
-  const segments: ISegment[] = [];
-  const parts = title.split(/(\*\*[^*]+\*\*)/g);
-  for (const part of parts) {
-    if (!part) continue;
-    if (part.startsWith("**") && part.endsWith("**")) {
-      segments.push({ text: part.slice(2, -2).toUpperCase(), color: accentColor });
-    } else {
-      segments.push({ text: part.toUpperCase(), color: "#FFFFFF" });
-    }
-  }
-  return segments.length > 0 ? segments : [{ text: title.toUpperCase(), color: "#FFFFFF" }];
-}
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const session = await getSessionUser();
@@ -45,7 +30,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const carousel = await Carousel.findOne({ _id: id, userId: session.userId });
   if (!carousel) return NextResponse.json({ error: "Carrossel não encontrado." }, { status: 404 });
 
-  const user = await User.findById(session.userId).select("+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey");
+  const user = await User.findById(session.userId).select("+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey textModel");
   if (!user?.hasGeminiKey) {
     return NextResponse.json({ error: "Gemini API Key não configurada." }, { status: 422 });
   }
@@ -88,7 +73,7 @@ Responda APENAS com JSON válido:
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const model = genAI.getGenerativeModel({ model: user.textModel || DEFAULT_TEXT_MODEL });
     const result = await model.generateContent(prompt);
     const rawText = result.response.text().trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const parsed = JSON.parse(rawText) as { title: string; body: string; imagePrompt?: string };
@@ -131,7 +116,12 @@ Responda APENAS com JSON válido:
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro desconhecido";
-    console.error("[add-slide]", msg);
+    console.error("[add-slide] ERRO COMPLETO:", err);
+    const isQuotaError = msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota");
+    if (isQuotaError) {
+      console.error("[add-slide] QUOTA ESGOTADA — resposta Gemini:", JSON.stringify(err, null, 2));
+      return NextResponse.json({ error: "Cota da Gemini API esgotada. Aguarde ou verifique seu plano no Google AI Studio." }, { status: 429 });
+    }
     return NextResponse.json({ error: `Erro ao gerar slide: ${msg}` }, { status: 502 });
   }
 }

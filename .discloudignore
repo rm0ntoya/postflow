@@ -29,10 +29,13 @@ yarn-error.log*
 docs/
 scratch/
 
-# Imagens de teste ou assets grandes que não são necessários em produção
-public/img/test/
+# Assets grandes não usados em produção
+img/
+public/img/
+carrossel-templates/
 *.mjs
-codingaistudio.js
+codigoaistudio.js
 promptgerarimagem.txt
-test-image.mjs
-# carrossel-templates/ # Remova o # se os templates já estiverem embutidos no código
+*.log
+*.tsbuildinfo
+.DS_Store

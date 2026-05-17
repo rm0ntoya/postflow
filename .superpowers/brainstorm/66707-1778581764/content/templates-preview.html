@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Novos Templates</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px 24px; }
+  h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: rgba(255,255,255,.45); margin-bottom: 32px; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #A855F7; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 40px; }
+  .card { cursor: pointer; border-radius: 12px; border: 2px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); padding: 12px; transition: border-color .2s, background .2s; user-select: none; }
+  .card:hover { border-color: rgba(168,85,247,.4); background: rgba(168,85,247,.06); }
+  .card.selected { border-color: #A855F7; background: rgba(168,85,247,.1); }
+  .card.selected .num { color: #A855F7; }
+  .slide-mock { width: 100%; aspect-ratio: 4/5; border-radius: 8px; overflow: hidden; position: relative; background: #111; margin-bottom: 10px; }
+  .card-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.7); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+  .num { font-size: 10px; color: rgba(255,255,255,.25); font-weight: 700; letter-spacing: .05em; }
+  .card-desc { font-size: 10px; color: rgba(255,255,255,.35); line-height: 1.5; }
+  .badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 999px; letter-spacing: .05em; text-transform: uppercase; }
+  .badge.text { background: rgba(34,211,238,.15); color: #22D3EE; }
+  .badge.img { background: rgba(249,115,22,.15); color: #F97316; }
+  .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,10,10,.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,.08); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .footer-count { font-size: 13px; color: rgba(255,255,255,.5); }
+  .footer-btn { background: #A855F7; border: none; color: #fff; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; opacity: .4; transition: opacity .2s; }
+  .footer-btn.active { opacity: 1; }
+
+  /* ── SVG slide mocks ── */
+  svg { display: block; }
+</style>
+</head>
+<body>
+<h2>10 Novos Modelos de Slide</h2>
+<p class="sub">Clique nos que aprovar. Pode selecionar todos ou ajustar depois.</p>
+
+<div class="section-label">🔤 Text-Only (5 novos)</div>
+<div class="grid">
+
+  <!-- T1: Big Stat -->
+  <div class="card" onclick="toggle(this,'t1')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- accent circle bg -->
+        <circle cx="40" cy="50" r="45" fill="#FFD700" opacity=".04"/>
+        <!-- big number left -->
+        <text x="8" y="42" font-size="32" font-weight="900" fill="#FFD700" opacity=".9">73</text>
+        <text x="8" y="52" font-size="7" fill="#FFD700" opacity=".6">%</text>
+        <!-- divider -->
+        <rect x="8" y="55" width="24" height="1.5" fill="#FFD700" opacity=".4" rx="1"/>
+        <!-- stat label -->
+        <rect x="8" y="59" width="30" height="3" fill="white" opacity=".5" rx="1"/>
+        <rect x="8" y="64" width="22" height="3" fill="white" opacity=".3" rx="1"/>
+        <!-- right side body -->
+        <rect x="46" y="18" width="28" height="3" fill="white" opacity=".6" rx="1"/>
+        <rect x="46" y="24" width="24" height="3" fill="white" opacity=".4" rx="1"/>
+        <rect x="46" y="30" width="26" height="3" fill="white" opacity=".4" rx="1"/>
+        <rect x="46" y="36" width="20" height="3" fill="white" opacity=".3" rx="1"/>
+        <rect x="46" y="42" width="24" height="3" fill="white" opacity=".3" rx="1"/>
+        <!-- vertical divider -->
+        <rect x="40" y="14" width="1" height="60" fill="white" opacity=".06" rx="1"/>
+        <!-- profile row -->
+        <circle cx="12" cy="88" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="86" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <!-- page num -->
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">03</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge text">text</span> <span class="num">TPL 7</span></div>
+    <div class="card-label">Big Stat / Dado</div>
+    <div class="card-desc">Número gigante esquerda + contexto direita. Para slides de dados, pesquisas, percentuais.</div>
+  </div>
+
+  <!-- T2: Checklist -->
+  <div class="card" onclick="toggle(this,'t2')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <circle cx="70" cy="85" r="35" fill="#A855F7" opacity=".04"/>
+        <!-- title -->
+        <rect x="8" y="10" width="40" height="4.5" fill="white" opacity=".7" rx="1"/>
+        <rect x="8" y="17" width="30" height="4.5" fill="white" opacity=".7" rx="1"/>
+        <!-- accent rule -->
+        <rect x="8" y="25" width="48" height="1.5" fill="#FFD700" opacity=".25" rx="1"/>
+        <!-- list items -->
+        <rect x="8" y="31" width="6" height="6" fill="#FFD700" opacity=".8" rx="1.5"/>
+        <rect x="17" y="32" width="36" height="2.5" fill="white" opacity=".6" rx="1"/>
+        <rect x="17" y="36" width="24" height="2" fill="white" opacity=".3" rx="1"/>
+
+        <rect x="8" y="44" width="6" height="6" fill="#FFD700" opacity=".6" rx="1.5"/>
+        <rect x="17" y="45" width="40" height="2.5" fill="white" opacity=".6" rx="1"/>
+        <rect x="17" y="49" width="28" height="2" fill="white" opacity=".3" rx="1"/>
+
+        <rect x="8" y="57" width="6" height="6" fill="#FFD700" opacity=".4" rx="1.5"/>
+        <rect x="17" y="58" width="34" height="2.5" fill="white" opacity=".6" rx="1"/>
+        <rect x="17" y="62" width="20" height="2" fill="white" opacity=".3" rx="1"/>
+
+        <rect x="8" y="70" width="6" height="6" fill="#FFD700" opacity=".25" rx="1.5"/>
+        <rect x="17" y="71" width="38" height="2.5" fill="white" opacity=".6" rx="1"/>
+        <rect x="17" y="75" width="26" height="2" fill="white" opacity=".3" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="90" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="88.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">04</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge text">text</span> <span class="num">TPL 8</span></div>
+    <div class="card-label">Checklist / Lista</div>
+    <div class="card-desc">4 itens com ícone de checkbox accent. Título + lista numerada/marcada com body curto por item.</div>
+  </div>
+
+  <!-- T3: Before/After -->
+  <div class="card" onclick="toggle(this,'t3')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- title -->
+        <rect x="8" y="8" width="44" height="4" fill="white" opacity=".7" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="17" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="15.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <!-- BEFORE box -->
+        <rect x="6" y="24" width="68" height="28" fill="#ef4444" opacity=".07" rx="4"/>
+        <rect x="6" y="24" width="68" height="28" fill="none" stroke="#ef4444" stroke-width=".8" opacity=".25" rx="4"/>
+        <text x="11" y="33" font-size="5.5" font-weight="700" fill="#ef4444" opacity=".7">❌  ANTES</text>
+        <rect x="11" y="35" width="40" height="2" fill="white" opacity=".4" rx="1"/>
+        <rect x="11" y="39" width="34" height="2" fill="white" opacity=".3" rx="1"/>
+        <rect x="11" y="43" width="38" height="2" fill="white" opacity=".3" rx="1"/>
+        <!-- AFTER box -->
+        <rect x="6" y="57" width="68" height="28" fill="#22c55e" opacity=".07" rx="4"/>
+        <rect x="6" y="57" width="68" height="28" fill="none" stroke="#22c55e" stroke-width=".8" opacity=".25" rx="4"/>
+        <text x="11" y="66" font-size="5.5" font-weight="700" fill="#22c55e" opacity=".7">✓  DEPOIS</text>
+        <rect x="11" y="68" width="40" height="2" fill="white" opacity=".4" rx="1"/>
+        <rect x="11" y="72" width="34" height="2" fill="white" opacity=".3" rx="1"/>
+        <rect x="11" y="76" width="38" height="2" fill="white" opacity=".3" rx="1"/>
+        <!-- vs divider -->
+        <circle cx="40" cy="54" r="5" fill="#0d0d0d"/>
+        <text x="40" y="56.5" font-size="5" font-weight="700" fill="white" opacity=".5" text-anchor="middle">VS</text>
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">05</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge text">text</span> <span class="num">TPL 9</span></div>
+    <div class="card-label">Antes / Depois</div>
+    <div class="card-desc">Dois blocos empilhados: ❌ situação atual vs ✓ situação ideal. Altíssimo potencial viral.</div>
+  </div>
+
+  <!-- T4: Steps / Timeline -->
+  <div class="card" onclick="toggle(this,'t4')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- title -->
+        <rect x="8" y="8" width="50" height="4" fill="white" opacity=".7" rx="1"/>
+        <rect x="8" y="14" width="38" height="4" fill="white" opacity=".7" rx="1"/>
+        <!-- timeline line -->
+        <rect x="16" y="26" width="1.5" height="55" fill="#FFD700" opacity=".2" rx="1"/>
+        <!-- step 1 -->
+        <circle cx="16.75" cy="30" r="4.5" fill="#FFD700" opacity=".9"/>
+        <text x="16.75" y="32" font-size="5" font-weight="900" fill="#000" text-anchor="middle">1</text>
+        <rect x="26" y="27.5" width="36" height="2.5" fill="white" opacity=".65" rx="1"/>
+        <rect x="26" y="31.5" width="26" height="2" fill="white" opacity=".35" rx="1"/>
+        <!-- step 2 -->
+        <circle cx="16.75" cy="50" r="4.5" fill="#FFD700" opacity=".7"/>
+        <text x="16.75" y="52" font-size="5" font-weight="900" fill="#000" text-anchor="middle">2</text>
+        <rect x="26" y="47.5" width="36" height="2.5" fill="white" opacity=".65" rx="1"/>
+        <rect x="26" y="51.5" width="28" height="2" fill="white" opacity=".35" rx="1"/>
+        <!-- step 3 -->
+        <circle cx="16.75" cy="69" r="4.5" fill="#FFD700" opacity=".5"/>
+        <text x="16.75" y="71" font-size="5" font-weight="900" fill="#000" text-anchor="middle">3</text>
+        <rect x="26" y="66.5" width="36" height="2.5" fill="white" opacity=".65" rx="1"/>
+        <rect x="26" y="70.5" width="22" height="2" fill="white" opacity=".35" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="90" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="88.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">06</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge text">text</span> <span class="num">TPL 10</span></div>
+    <div class="card-label">Timeline / Passos</div>
+    <div class="card-desc">3 steps com linha vertical accent e número. Ideal para tutoriais, processos, metodologias.</div>
+  </div>
+
+  <!-- T5: Split Editorial -->
+  <div class="card" onclick="toggle(this,'t5')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- top accent bar -->
+        <rect x="8" y="8" width="64" height="1.5" fill="#FFD700" opacity=".3" rx="1"/>
+        <!-- label -->
+        <rect x="8" y="12" width="18" height="2.5" fill="#FFD700" opacity=".5" rx="1"/>
+        <!-- BIG title left side -->
+        <rect x="8" y="18" width="32" height="6" fill="white" opacity=".8" rx="1"/>
+        <rect x="8" y="26" width="28" height="6" fill="white" opacity=".8" rx="1"/>
+        <rect x="8" y="34" width="30" height="6" fill="white" opacity=".75" rx="1"/>
+        <rect x="8" y="42" width="22" height="6" fill="#FFD700" opacity=".7" rx="1"/>
+        <!-- vertical divider -->
+        <rect x="46" y="18" width="1" height="56" fill="white" opacity=".07" rx="1"/>
+        <!-- right side body text -->
+        <rect x="50" y="18" width="24" height="2.5" fill="white" opacity=".5" rx="1"/>
+        <rect x="50" y="23" width="22" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="50" y="28" width="24" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="50" y="33" width="18" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <rect x="50" y="42" width="22" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="50" y="47" width="20" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <rect x="50" y="52" width="24" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <!-- bottom rule -->
+        <rect x="8" y="62" width="64" height="1.5" fill="white" opacity=".06" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="72" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="70.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">07</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge text">text</span> <span class="num">TPL 11</span></div>
+    <div class="card-label">Split Editorial</div>
+    <div class="card-desc">Título gigante coluna esquerda + body denso coluna direita. Layout editorial de revista.</div>
+  </div>
+
+</div>
+
+<div class="section-label">🖼️ Image Templates (5 novos)</div>
+<div class="grid">
+
+  <!-- I1: Circle Portrait -->
+  <div class="card" onclick="toggle(this,'i1')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#111"/>
+        <!-- big circle image -->
+        <circle cx="40" cy="32" r="22" fill="#222"/>
+        <circle cx="40" cy="32" r="22" fill="none" stroke="#FFD700" stroke-width="1.5" opacity=".4"/>
+        <!-- image placeholder pattern -->
+        <circle cx="40" cy="27" r="7" fill="#333"/>
+        <ellipse cx="40" cy="43" rx="13" ry="9" fill="#333"/>
+        <!-- accent dot top -->
+        <circle cx="40" cy="8" r="2.5" fill="#FFD700" opacity=".8"/>
+        <!-- title below circle -->
+        <rect x="10" y="60" width="60" height="5" fill="white" opacity=".8" rx="1"/>
+        <rect x="15" y="67" width="50" height="5" fill="white" opacity=".8" rx="1"/>
+        <!-- rule -->
+        <rect x="30" y="75" width="20" height="1.5" fill="#FFD700" opacity=".5" rx="1"/>
+        <!-- body -->
+        <rect x="12" y="79" width="56" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="16" y="83" width="48" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="93" r="2.5" fill="white" opacity=".2"/>
+        <rect x="17" y="91.5" width="18" height="2" fill="white" opacity=".25" rx="1"/>
+        <text x="68" y="96" font-size="5" fill="white" opacity=".2" text-anchor="middle">03</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge img">img</span> <span class="num">TPL 10</span></div>
+    <div class="card-label">Retrato Circular</div>
+    <div class="card-desc">Imagem circular topo centralizada + título abaixo. Editorial clean, foco no sujeito.</div>
+  </div>
+
+  <!-- I2: Full bleed split diagonal -->
+  <div class="card" onclick="toggle(this,'i2')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#111"/>
+        <!-- image top 55% -->
+        <rect x="0" y="0" width="80" height="58" fill="#1e1e1e"/>
+        <!-- diagonal cut -->
+        <polygon points="0,50 80,58 80,66 0,58" fill="#0d0d0d"/>
+        <!-- image placeholder in top -->
+        <rect x="0" y="0" width="80" height="56" fill="#1a1a1a"/>
+        <rect x="20" y="10" width="40" height="35" fill="#252525" rx="2"/>
+        <!-- accent bar over cut -->
+        <polygon points="0,54 80,60 80,62 0,56" fill="#FFD700" opacity=".5"/>
+        <!-- text bottom -->
+        <rect x="8" y="66" width="44" height="5" fill="white" opacity=".8" rx="1"/>
+        <rect x="8" y="73" width="36" height="5" fill="white" opacity=".75" rx="1"/>
+        <!-- body -->
+        <rect x="8" y="81" width="52" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="8" y="85" width="44" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <!-- profile -->
+        <circle cx="12" cy="95" r="2.5" fill="white" opacity=".2"/>
+        <rect x="17" y="93.5" width="18" height="2" fill="white" opacity=".25" rx="1"/>
+        <text x="68" y="97" font-size="5" fill="white" opacity=".2" text-anchor="middle">04</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge img">img</span> <span class="num">TPL 11</span></div>
+    <div class="card-label">Corte Diagonal</div>
+    <div class="card-desc">Imagem topo com corte diagonal accent + texto abaixo. Dinâmico, cinematográfico.</div>
+  </div>
+
+  <!-- I3: 3-grid mosaic -->
+  <div class="card" onclick="toggle(this,'i3')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- profile top -->
+        <circle cx="12" cy="10" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="8.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <!-- tall image left -->
+        <rect x="6" y="18" width="32" height="62" fill="#1e1e1e" rx="6"/>
+        <!-- 2 stacked right -->
+        <rect x="42" y="18" width="32" height="28" fill="#1e1e1e" rx="6"/>
+        <rect x="42" y="50" width="32" height="30" fill="#1e1e1e" rx="6"/>
+        <!-- title text overlaid at bottom -->
+        <rect x="6" y="84" width="68" height="3.5" fill="white" opacity=".7" rx="1"/>
+        <rect x="15" y="89" width="50" height="3.5" fill="white" opacity=".6" rx="1"/>
+        <!-- page -->
+        <text x="68" y="97" font-size="5" fill="white" opacity=".2" text-anchor="middle">05</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge img">img</span> <span class="num">TPL 12</span></div>
+    <div class="card-label">Mosaico 1+2</div>
+    <div class="card-desc">1 imagem tall esquerda + 2 imagens empilhadas direita. Usa 3 prompts de imagem distintos.</div>
+  </div>
+
+  <!-- I4: Floating text card over bg -->
+  <div class="card" onclick="toggle(this,'i4')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <!-- full bleed bg image -->
+        <rect width="80" height="100" fill="#1a1a1a"/>
+        <!-- gradient overlay -->
+        <rect width="80" height="100" fill="url(#g1)" opacity=".7"/>
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#000" stop-opacity=".3"/>
+            <stop offset="100%" stop-color="#000" stop-opacity=".85"/>
+          </linearGradient>
+        </defs>
+        <!-- floating card center -->
+        <rect x="8" y="28" width="64" height="44" fill="rgba(0,0,0,.55)" rx="10" opacity=".9"/>
+        <rect x="8" y="28" width="64" height="44" fill="none" stroke="#FFD700" stroke-width=".8" opacity=".3" rx="10"/>
+        <!-- card content -->
+        <rect x="16" y="36" width="14" height="1.5" fill="#FFD700" opacity=".5" rx="1"/>
+        <rect x="16" y="41" width="48" height="3.5" fill="white" opacity=".8" rx="1"/>
+        <rect x="16" y="47" width="42" height="3.5" fill="white" opacity=".75" rx="1"/>
+        <rect x="16" y="55" width="36" height="2.5" fill="white" opacity=".4" rx="1"/>
+        <rect x="16" y="59" width="40" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <rect x="16" y="63" width="30" height="2.5" fill="white" opacity=".3" rx="1"/>
+        <!-- profile bottom -->
+        <circle cx="12" cy="90" r="3" fill="white" opacity=".3"/>
+        <rect x="18" y="88.5" width="22" height="2.5" fill="white" opacity=".35" rx="1"/>
+        <text x="68" y="93" font-size="5" fill="white" opacity=".2" text-anchor="middle">06</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge img">img</span> <span class="num">TPL 13</span></div>
+    <div class="card-label">Card Flutuante</div>
+    <div class="card-desc">Bg full-bleed + card com blur/transparência flutuando no centro. Sofisticado, luxury.</div>
+  </div>
+
+  <!-- I5: Panoramic strip -->
+  <div class="card" onclick="toggle(this,'i5')">
+    <div class="slide-mock">
+      <svg viewBox="0 0 80 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect width="80" height="100" fill="#0d0d0d"/>
+        <!-- profile top -->
+        <circle cx="12" cy="10" r="3" fill="white" opacity=".2"/>
+        <rect x="18" y="8.5" width="20" height="2.5" fill="white" opacity=".25" rx="1"/>
+        <!-- BIG title -->
+        <rect x="8" y="18" width="52" height="6" fill="white" opacity=".8" rx="1"/>
+        <rect x="8" y="26" width="44" height="6" fill="white" opacity=".75" rx="1"/>
+        <!-- accent rule -->
+        <rect x="8" y="35" width="56" height="1.5" fill="#FFD700" opacity=".4" rx="1"/>
+        <!-- body text -->
+        <rect x="8" y="40" width="50" height="2.5" fill="white" opacity=".45" rx="1"/>
+        <rect x="8" y="44" width="42" height="2.5" fill="white" opacity=".35" rx="1"/>
+        <!-- WIDE panoramic strip image -->
+        <rect x="0" y="52" width="80" height="30" fill="#1e1e1e"/>
+        <!-- 3 segments in strip -->
+        <rect x="2" y="54" width="23" height="26" fill="#252525" rx="4"/>
+        <rect x="28.5" y="54" width="23" height="26" fill="#222" rx="4"/>
+        <rect x="55" y="54" width="23" height="26" fill="#252525" rx="4"/>
+        <!-- accent over strip -->
+        <rect x="0" y="82" width="80" height="1.5" fill="#FFD700" opacity=".2"/>
+        <!-- cta/page num bottom -->
+        <rect x="8" y="88" width="44" height="2.5" fill="white" opacity=".35" rx="1"/>
+        <text x="68" y="97" font-size="5" fill="white" opacity=".2" text-anchor="middle">07</text>
+      </svg>
+    </div>
+    <div class="card-label"><span class="badge img">img</span> <span class="num">TPL 14</span></div>
+    <div class="card-label">Faixa Panorâmica</div>
+    <div class="card-desc">Título + body topo + faixa de 3 imagens horizontais. Conta uma progressão visual.</div>
+  </div>
+
+</div>
+
+<p style="font-size:12px;color:rgba(255,255,255,.3);margin-bottom:80px;">Selecione os que aprovar — pode selecionar todos. Responda no terminal para confirmar.</p>
+
+<div class="footer-bar">
+  <span class="footer-count" id="count-label">0 de 10 selecionados</span>
+  <button class="footer-btn" id="approve-btn" onclick="confirmAll()">Aprovar selecionados →</button>
+</div>
+
+<script>
+  const selected = new Set();
+  function toggle(el, id) {
+    el.classList.toggle('selected');
+    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    document.getElementById('count-label').textContent = selected.size + ' de 10 selecionados';
+    document.getElementById('approve-btn').classList.toggle('active', selected.size > 0);
+    if (window.recordChoice) window.recordChoice([...selected].join(','), [...selected].map(s=>s).join(', '));
+  }
+  function confirmAll() {
+    if (selected.size === 0) return;
+    if (window.recordChoice) window.recordChoice([...selected].join(','), 'aprovados: ' + [...selected].join(', '));
+  }
+</script>
+</body>
+</html>

@@ -788,7 +788,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
                   >
                     <SlidePreview
                       slide={{ ...s, ...(externallyGeneratedImages[i] ? { bgImageUrl: externallyGeneratedImages[i] } : {}) }}
-                      carousel={draft}
+                      
                     />
                   </div>
 

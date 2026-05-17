@@ -23,12 +23,13 @@ export async function PATCH(req: NextRequest) {
 
   try {
     await connectDB();
-    const body = await req.json() as Partial<{
-      maintenanceMode: boolean;
-      maintenanceBanner: string;
-      announcementBanner: string;
-      announcementActive: boolean;
-    }>;
+    const raw = await req.json();
+
+    const allowed = ["maintenanceMode", "maintenanceBanner", "announcementBanner", "announcementActive"] as const;
+    const body: Partial<Record<typeof allowed[number], unknown>> = {};
+    for (const key of allowed) {
+      if (key in raw) body[key] = raw[key];
+    }
 
     const cfg = await AppConfig.findOneAndUpdate(
       { key: "singleton" },

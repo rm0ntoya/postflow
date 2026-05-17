@@ -1,0 +1,235 @@
+<h2>Layout A + Chat IA flutuante</h2>
+<p class="subtitle">Clique no botão IA para ver o chat expandir. Duas variações de posição/tamanho do painel.</p>
+
+<style>
+  .ed-wrap { display: grid; grid-template-rows: 36px 1fr; grid-template-columns: 160px 1fr 200px; height: 280px; gap: 1px; background: #222; border-radius: 10px; overflow: hidden; font-size: 9px; font-family: monospace; position: relative; }
+  .ed-topbar { grid-column: 1/-1; background: #111; display: flex; align-items: center; padding: 0 12px; gap: 8px; }
+  .ed-logo { width: 22px; height: 22px; background: linear-gradient(135deg,#6C27BE,#A855F7); border-radius: 5px; flex-shrink:0; }
+  .ed-title-input { flex:1; background: #1a1a28; border-radius: 4px; height: 18px; max-width: 200px; border: none; }
+  .ed-meta { font-size: 7px; color: #555; }
+  .ed-actions { display:flex; gap:6px; margin-left:auto; }
+  .ed-btn { height: 20px; padding: 0 8px; border-radius: 4px; background: #1a1a28; border: 1px solid #333; color: #888; font-size: 7px; display:flex;align-items:center;gap:3px; }
+  .ed-btn.pri { background: linear-gradient(135deg,#6C27BE,#A855F7); border-color:transparent; color:#fff; }
+
+  .ed-slides { background: #0d0d1a; display:flex; flex-direction:column; gap:4px; padding:10px 8px; overflow:hidden; }
+  .ed-slides-label { font-size:7px; color:#555; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+  .slide-thumb { border-radius:5px; border:1px solid #333; overflow:hidden; aspect-ratio:4/5; background:#111; flex-shrink:0; }
+  .slide-thumb.sel { border-color:#A855F7; box-shadow:0 0 0 1px rgba(168,85,247,.3); background:#1a1030; }
+  .slide-thumb.add { border-style:dashed; display:flex;align-items:center;justify-content:center;color:#444;font-size:12px; }
+
+  .ed-canvas { background: #08080f; display:flex; align-items:center; justify-content:center; position:relative; }
+  .slide-main { width:110px; height:138px; background:#1a1030; border-radius:8px; border:1.5px solid #A855F7; box-shadow:0 8px 32px rgba(168,85,247,.35); position:relative; overflow:hidden; }
+  .slide-main-content { position:absolute; bottom:16px; left:12px; right:12px; }
+  .slide-line { height:5px; border-radius:3px; margin-bottom:4px; }
+
+  .ed-props { background: #0d0d1a; display:flex; flex-direction:column; overflow:hidden; }
+  .ed-props-tabs { display:flex; border-bottom:1px solid #1a1a30; }
+  .ed-props-tab { flex:1; padding:5px 4px; text-align:center; font-size:7px; color:#555; border-bottom:1.5px solid transparent; }
+  .ed-props-tab.on { color:#A855F7; border-bottom-color:#A855F7; }
+  .ed-props-body { flex:1; padding:8px; display:flex; flex-direction:column; gap:5px; }
+  .prop-row { display:flex; gap:6px; align-items:center; }
+  .prop-lbl { font-size:7px; color:#555; width:32px; flex-shrink:0; }
+  .prop-input { flex:1; height:14px; background:#111; border:1px solid #2a2a40; border-radius:3px; }
+  .prop-swatch { width:14px;height:14px;border-radius:3px; flex-shrink:0; }
+  .prop-section { font-size:7px; color:#3a3a60; text-transform:uppercase; letter-spacing:.1em; margin-bottom:2px; margin-top:4px; }
+  .prop-slider { flex:1; height:3px; background:#1a1a30; border-radius:2px; position:relative; }
+  .prop-slider-fill { height:100%; background:#A855F7; border-radius:2px; }
+
+  /* FAB */
+  .fab { position:absolute; bottom:16px; right:16px; width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#6C27BE,#A855F7); box-shadow:0 4px 16px rgba(168,85,247,.5); display:flex;align-items:center;justify-content:center; cursor:pointer; z-index:10; transition:all .2s; border:none; }
+  .fab:hover { transform:scale(1.1); }
+  .fab svg { width:16px;height:16px;color:#fff; }
+  .fab-badge { position:absolute; top:-2px; right:-2px; width:10px; height:10px; border-radius:50%; background:#4ADE80; border:1.5px solid #08080f; }
+
+  /* Chat panel - closed by default */
+  .chat-panel { position:absolute; bottom:60px; right:16px; width:180px; background:#0d0d1a; border:1px solid #2a1a40; border-radius:12px; box-shadow:0 16px 48px rgba(0,0,0,.6); display:flex;flex-direction:column;overflow:hidden; transform-origin:bottom right; transition:all .25s cubic-bezier(.34,1.56,.64,1); z-index:9; }
+  .chat-panel.closed { transform:scale(0) translateY(8px); opacity:0; pointer-events:none; }
+  .chat-panel.open { transform:scale(1) translateY(0); opacity:1; }
+
+  .chat-header { padding:8px 10px; border-bottom:1px solid #1a1a30; display:flex;align-items:center;gap:6px; }
+  .chat-header-icon { width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6C27BE,#A855F7);display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .chat-header-title { font-size:8px;font-weight:700;color:#fff; }
+  .chat-header-sub { font-size:7px;color:#555; }
+  .chat-msgs { flex:1;padding:8px;display:flex;flex-direction:column;gap:5px;min-height:80px; }
+  .chat-msg-ai { background:#111;border:1px solid #1a1a30;border-radius:6px 6px 6px 2px;padding:5px 7px;font-size:7px;color:#888;line-height:1.5; }
+  .chat-msg-user { background:#2a1a40;border:1px solid rgba(168,85,247,.25);border-radius:6px 6px 2px 6px;padding:5px 7px;font-size:7px;color:#ccc;line-height:1.5;align-self:flex-end;max-width:80%; }
+  .chat-action-tag { display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:#4ADE80;font-size:6px;margin-top:2px; }
+  .chat-input-row { padding:6px 8px;border-top:1px solid #1a1a30;display:flex;gap:4px; }
+  .chat-input { flex:1;background:#111;border:1px solid #2a2a40;border-radius:5px;height:20px;padding:0 6px;font-size:7px;color:#fff; }
+  .chat-send { width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#6C27BE,#A855F7);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer; }
+</style>
+
+<div class="section">
+  <p class="label">ESTADO FECHADO — FAB visível no canto inferior direito do canvas</p>
+</div>
+
+<!-- Preview A: fechado -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+
+  <div>
+    <p class="label" style="margin-bottom:8px;">Fechado — só o botão IA</p>
+    <div class="ed-wrap" style="height:220px;">
+      <div class="ed-topbar">
+        <div class="ed-logo"></div>
+        <div class="ed-title-input"></div>
+        <span class="ed-meta">1080 × 1350</span>
+        <div class="ed-actions">
+          <div class="ed-btn">⬇ Baixar</div>
+          <div class="ed-btn pri">✓ Salvar</div>
+        </div>
+      </div>
+      <div class="ed-slides">
+        <div class="ed-slides-label">Slides</div>
+        <div class="slide-thumb sel"></div>
+        <div class="slide-thumb"></div>
+        <div class="slide-thumb add">+</div>
+      </div>
+      <div class="ed-canvas">
+        <div class="slide-main">
+          <div class="slide-main-content">
+            <div class="slide-line" style="background:#fff;width:80%;"></div>
+            <div class="slide-line" style="background:rgba(255,255,255,.4);width:60%;"></div>
+          </div>
+        </div>
+        <!-- FAB fechado -->
+        <button class="fab" onclick="this.closest('.ed-canvas').querySelector('.chat-panel').classList.toggle('closed')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.06L2 22l4.94-1.38A9.96 9.96 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+          <div class="fab-badge"></div>
+        </button>
+        <div class="chat-panel closed">
+          <div class="chat-header">
+            <div class="chat-header-icon">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.06L2 22l4.94-1.38A9.96 9.96 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+            </div>
+            <div><div class="chat-header-title">Agente IA</div><div class="chat-header-sub">edite por texto</div></div>
+          </div>
+          <div class="chat-msgs">
+            <div class="chat-msg-ai">Olá! Me diga o que quer mudar no carrossel.</div>
+            <div class="chat-msg-user">Mude o título para azul</div>
+            <div class="chat-msg-ai">Feito! Alterei a cor do título.
+              <div><div class="chat-action-tag">✦ editText</div></div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <div class="chat-input"></div>
+            <button class="chat-send">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="ed-props">
+        <div class="ed-props-tabs">
+          <div class="ed-props-tab on">Design</div>
+          <div class="ed-props-tab">Fundo</div>
+          <div class="ed-props-tab">Camadas</div>
+        </div>
+        <div class="ed-props-body">
+          <div class="prop-section">Texto</div>
+          <div class="prop-row"><div class="prop-lbl">Fonte</div><div class="prop-input"></div></div>
+          <div class="prop-row"><div class="prop-lbl">Tamanho</div><div class="prop-slider"><div class="prop-slider-fill" style="width:60%"></div></div></div>
+          <div class="prop-section">Cor</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">
+            <div class="prop-swatch" style="background:#fff;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#A855F7;width:auto;aspect-ratio:1;border:1.5px solid #fff;"></div>
+            <div class="prop-swatch" style="background:#6C27BE;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#F97316;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#4ADE80;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#3B82F6;width:auto;aspect-ratio:1;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#666;margin-top:8px;text-align:center;">← Clica no botão roxo no canvas para abrir o chat</p>
+  </div>
+
+  <div>
+    <p class="label" style="margin-bottom:8px;">Aberto — painel flutua sobre canvas</p>
+    <div class="ed-wrap" style="height:220px;">
+      <div class="ed-topbar">
+        <div class="ed-logo"></div>
+        <div class="ed-title-input"></div>
+        <span class="ed-meta">1080 × 1350</span>
+        <div class="ed-actions">
+          <div class="ed-btn">⬇ Baixar</div>
+          <div class="ed-btn pri">✓ Salvar</div>
+        </div>
+      </div>
+      <div class="ed-slides">
+        <div class="ed-slides-label">Slides</div>
+        <div class="slide-thumb sel"></div>
+        <div class="slide-thumb"></div>
+        <div class="slide-thumb add">+</div>
+      </div>
+      <div class="ed-canvas">
+        <div class="slide-main">
+          <div class="slide-main-content">
+            <div class="slide-line" style="background:#fff;width:80%;"></div>
+            <div class="slide-line" style="background:rgba(255,255,255,.4);width:60%;"></div>
+          </div>
+        </div>
+        <button class="fab" style="background:rgba(168,85,247,.3);box-shadow:0 0 0 2px #A855F7;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.06L2 22l4.94-1.38A9.96 9.96 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+        </button>
+        <div class="chat-panel open">
+          <div class="chat-header">
+            <div class="chat-header-icon">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.06L2 22l4.94-1.38A9.96 9.96 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+            </div>
+            <div><div class="chat-header-title">Agente IA</div><div class="chat-header-sub">edite por texto</div></div>
+          </div>
+          <div class="chat-msgs">
+            <div class="chat-msg-ai">Olá! Me diga o que quer mudar no carrossel.</div>
+            <div class="chat-msg-user">Mude o título para azul</div>
+            <div class="chat-msg-ai">Feito!<div><div class="chat-action-tag">✦ editText</div></div></div>
+          </div>
+          <div class="chat-input-row">
+            <div class="chat-input"></div>
+            <button class="chat-send">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="ed-props">
+        <div class="ed-props-tabs">
+          <div class="ed-props-tab on">Design</div>
+          <div class="ed-props-tab">Fundo</div>
+          <div class="ed-props-tab">Camadas</div>
+        </div>
+        <div class="ed-props-body">
+          <div class="prop-section">Texto</div>
+          <div class="prop-row"><div class="prop-lbl">Fonte</div><div class="prop-input"></div></div>
+          <div class="prop-row"><div class="prop-lbl">Tamanho</div><div class="prop-slider"><div class="prop-slider-fill" style="width:60%"></div></div></div>
+          <div class="prop-section">Cor</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">
+            <div class="prop-swatch" style="background:#fff;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#A855F7;width:auto;aspect-ratio:1;border:1.5px solid #fff;"></div>
+            <div class="prop-swatch" style="background:#6C27BE;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#F97316;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#4ADE80;width:auto;aspect-ratio:1;"></div>
+            <div class="prop-swatch" style="background:#3B82F6;width:auto;aspect-ratio:1;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:8px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Aprovado — seguir com este layout</h3>
+      <p>FAB roxo no canto inferior direito do canvas. Clique abre painel flutuante animado com o chat IA.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="bigger-panel" onclick="toggleSelect(this)">
+    <div class="letter">↕</div>
+    <div class="content">
+      <h3>Aprovado, mas painel maior</h3>
+      <p>Mesma ideia, mas quando aberto o painel ocupa mais área (ex: 320px largura, altura maior) para leitura mais confortável.</p>
+    </div>
+  </div>
+</div>

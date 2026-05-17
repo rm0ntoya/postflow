@@ -9,7 +9,7 @@ import { CANVAS_W, CANVAS_H, parseSegments } from "@/lib/canvas";
 
 export const maxDuration = 60;
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
 
 interface GeminiSlide {
   slideNumber: number;
@@ -62,10 +62,13 @@ function buildCanvasSlides(
     const SG  = "Space Grotesk";
     const titleText = gs.title.replace(/\*\*/g, "").toUpperCase();
 
+    // Randomize middle templates
+    const randomTpl = Math.floor(Math.random() * 1000);
+
     // ─── TEXT-ONLY SLIDES ──────────────────────────────────────────────────────
     // All centered, big TheBoldFont titles, more body content
     if (!hasImage && !isFirst && !isLast) {
-      const tpl = textSlideCount % 11;
+      const tpl = randomTpl % 11;
       textSlideCount++;
 
       if (tpl === 0) {
@@ -218,7 +221,7 @@ function buildCanvasSlides(
     let imgTpl: number;
     if (isFirst) imgTpl = 0;
     else if (isLast) imgTpl = 1;
-    else imgTpl = 2 + (i % 13); // templates 2–14 for middle image slides
+    else imgTpl = 2 + (randomTpl % 13); // templates 2–14 for middle image slides
 
     if (imgTpl === 0 || imgTpl === 1) {
       // Cover / CTA: text bottom over full-bleed background image
@@ -453,7 +456,7 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   const user = await User.findById(session.userId).select(
-    "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey aiContext brandAccentColor profileAvatarUrl"
+    "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey textModel aiContext brandAccentColor profileAvatarUrl"
   );
   if (!user) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
   if (!user.hasGeminiKey) {
@@ -470,6 +473,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Falha ao descriptografar a API Key. Re-salve sua chave em Configurações." }, { status: 500 });
   }
+
+  console.log(`[carousel/generate] usando key: ${geminiApiKey.slice(0, 8)}...${geminiApiKey.slice(-4)} | modelo: ${user.textModel || DEFAULT_TEXT_MODEL}`);
 
   const cid = `c${Date.now()}`;
   const title = theme.length > 60 ? theme.slice(0, 60) + "…" : theme;
@@ -490,8 +495,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const model = genAI.getGenerativeModel({ model: user.textModel || DEFAULT_TEXT_MODEL });
     const prompt = buildPrompt(theme, slideCount, tone, detail, viral, aiContext, pasteContent, modeDebate, paletteColors);
+
+    console.log(`[carousel/generate] prompt chars: ${prompt.length} | tokens estimados: ~${Math.round(prompt.length / 4)}`);
+    console.log(`[carousel/generate] prompt completo:\n${prompt}`);
 
     const result = await model.generateContent(prompt);
     const rawText = result.response.text().trim();
@@ -535,6 +543,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
+    console.error("[carousel/generate] ERRO COMPLETO:", err);
 
     const isApiKeyError =
       message.includes("API_KEY_INVALID") ||
@@ -546,10 +555,15 @@ export async function POST(req: NextRequest) {
     carousel.errorMessage = message;
     await carousel.save();
 
-    if (isApiKeyError) return NextResponse.json({ error: "Gemini API Key inválida. Verifique sua chave em Configurações." }, { status: 401 });
-    if (isQuotaError) return NextResponse.json({ error: "Cota da Gemini API esgotada. Aguarde ou verifique seu plano no Google AI Studio." }, { status: 429 });
+    if (isApiKeyError) {
+      console.error("[carousel/generate] API KEY INVÁLIDA — resposta Gemini:", JSON.stringify(err, null, 2));
+      return NextResponse.json({ error: "Gemini API Key inválida. Verifique sua chave em Configurações." }, { status: 401 });
+    }
+    if (isQuotaError) {
+      console.error("[carousel/generate] QUOTA ESGOTADA — resposta Gemini:", JSON.stringify(err, null, 2));
+      return NextResponse.json({ error: "Cota da Gemini API esgotada. Aguarde ou verifique seu plano no Google AI Studio." }, { status: 429 });
+    }
 
-    console.error("[carousel/generate]", message);
     return NextResponse.json({ error: `Erro ao gerar carrossel: ${message}` }, { status: 502 });
   }
 }

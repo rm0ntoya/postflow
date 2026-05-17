@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { decryptApiKey } from "@/lib/encryption";
 
 export const maxDuration = 120;
-const IMAGE_MODEL = "gemini-3-pro-image-preview";
+const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const user = await User.findById(session.userId).select(
-      "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey"
+      "+encryptedGeminiKey +geminiKeyIv +geminiKeyAuthTag hasGeminiKey imageModel"
     );
 
     if (!user || !user.hasGeminiKey) {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     const response = await ai.models.generateContentStream({
-      model: IMAGE_MODEL,
+      model: user.imageModel || DEFAULT_IMAGE_MODEL,
       config: {
         imageConfig: {
           aspectRatio: "4:5",

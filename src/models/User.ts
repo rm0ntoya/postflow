@@ -27,6 +27,8 @@ export interface IUser extends Document {
   geminiKeyIv?: string;
   geminiKeyAuthTag?: string;
   hasGeminiKey: boolean;
+  textModel?: string;
+  imageModel?: string;
   aiContext?: IAiContext;
   brandAccentColor?: string;
   colorPalettes?: IColorPalette[];
@@ -58,6 +60,8 @@ const UserSchema = new Schema<IUser>(
     geminiKeyIv: { type: String, select: false },
     geminiKeyAuthTag: { type: String, select: false },
     hasGeminiKey: { type: Boolean, default: false },
+    textModel: { type: String, default: "gemini-2.0-flash" },
+    imageModel: { type: String, default: "gemini-3-pro-image-preview" },
     aiContext: { type: Schema.Types.Mixed },
     brandAccentColor: { type: String, default: "#FFD700" },
     colorPalettes: { type: Schema.Types.Mixed, default: [] },

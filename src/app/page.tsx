@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import "./landing.css";
+import { GlowCard } from "@/components/ui/spotlight-card";
 import ViralGallery from "@/components/ViralGallery";
 import CreatorsTicker from "@/components/CreatorsTicker";
 import CeoSection from "@/components/CeoSection";
@@ -600,7 +601,7 @@ export default function LandingPage() {
           </div>
           <div className="plans-grid">
             {/* Plano Starter */}
-            <div className="plan-card">
+            <GlowCard glowColor="purple" customSize className="plan-card">
               <div className="plan-name">Starter</div>
               <div className="plan-price">
                 <span className="plan-price-big">{price1}</span>
@@ -623,9 +624,9 @@ export default function LandingPage() {
               <div className="plan-cta">
                 <button className="plan-outline-btn" onClick={() => isLoggedIn ? router.push("/dashboard") : setModal("register")}>Começar grátis →</button>
               </div>
-            </div>
+            </GlowCard>
             {/* Plano Pro */}
-            <div className="plan-card pop">
+            <GlowCard glowColor="orange" customSize className="plan-card pop p-0">
               <div className="plan-pop-inner">
                 <div className="plan-badge">✦ Mais popular</div>
                 <div className="plan-name">Pro</div>
@@ -654,7 +655,7 @@ export default function LandingPage() {
                   <button className="plan-full-btn" onClick={() => isLoggedIn ? router.push("/dashboard") : setModal("register")}>Começar agora →</button>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </div>
         </div>
       </section>
