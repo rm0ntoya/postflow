@@ -1,536 +1,406 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import CreateModal, { GenerateSettings } from "@/components/CreateModal";
-import GenOverlay from "@/components/GenOverlay";
-import Toast from "@/components/Toast";
+import React, { useState, useMemo } from "react";
+import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { Card } from "@/components/ui/Card";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
-interface Idea {
+/* ────────────────────────────────────────────────────────────────────────
+   Types
+   ──────────────────────────────────────────────────────────────────────── */
+
+type ViewMode = "mês" | "semana" | "lista";
+
+interface CalendarEvent {
   id: string;
   title: string;
-  description: string;
-  tone: string;
-  hook?: string;
-  status: "pending" | "done";
-  carouselId?: string;
+  date: string; // yyyy-mm-dd
+  time?: string; // HH:mm
+  status?: "scheduled" | "published" | "draft";
 }
 
-interface ScheduledPost {
-  _id: string;
-  date: string;
-  niche: string;
-  objective: string;
-  ideas: Idea[];
+/* ────────────────────────────────────────────────────────────────────────
+   buildGrid: Create a 6×7 grid (42 days, Monday-first)
+   ──────────────────────────────────────────────────────────────────────── */
+
+function buildGrid(year: number, month: number): (number | null)[] {
+  // 1st of month
+  const firstDay = new Date(year, month, 1);
+  // Day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+  const dayOfWeek = firstDay.getDay();
+  // Adjust for Monday-first: Monday=0
+  let startOffset = dayOfWeek - 1;
+  if (startOffset < 0) startOffset = 6;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const grid: (number | null)[] = [];
+
+  // Fill leading empty days from previous month
+  for (let i = 0; i < startOffset; i++) {
+    grid.push(null);
+  }
+
+  // Fill current month
+  for (let i = 1; i <= daysInMonth; i++) {
+    grid.push(i);
+  }
+
+  // Fill trailing empty days to complete 6 rows (42 days)
+  while (grid.length < 42) {
+    grid.push(null);
+  }
+
+  return grid;
 }
 
-const OBJECTIVES = ["Autoridade", "Venda", "Viralização", "Engajamento", "Educação"];
-const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/* ────────────────────────────────────────────────────────────────────────
+   formatDatePT: Format date as "quinta-feira, 17 de maio"
+   ──────────────────────────────────────────────────────────────────────── */
 
-const GEN_STEPS = [
-  "Conectando ao Gemini…",
-  "Analisando contexto e tema…",
-  "Estruturando narrativa…",
-  "Escrevendo copy slide a slide…",
-  "Aplicando design e imagens…",
-  "Montando carrossel final…",
-];
+function formatDatePT(year: number, month: number, day: number): string {
+  const date = new Date(year, month, day);
+  const dayNames = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+  const monthNames = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-function toLocalDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  const dayName = dayNames[date.getDay()];
+  const monthName = monthNames[month];
+
+  return `${dayName}, ${day} de ${monthName}`;
 }
 
-export default function CalendarPage() {
-  const router = useRouter();
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
+/* ────────────────────────────────────────────────────────────────────────
+   formatMonthYear: Format month/year as "Maio de 2026"
+   ──────────────────────────────────────────────────────────────────────── */
 
-  // Calendar state
-  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
-  const [posts, setPosts] = useState<ScheduledPost[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(true);
+function formatMonthYear(year: number, month: number): string {
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  return `${monthNames[month]} de ${year}`;
+}
 
-  // Selected day panel
-  const [panelDay, setPanelDay] = useState<string | null>(null);
+/* ────────────────────────────────────────────────────────────────────────
+   getDayKey: Convert year/month/day to yyyy-mm-dd string
+   ──────────────────────────────────────────────────────────────────────── */
 
-  // Briefing form
-  const [niche, setNiche] = useState("");
-  const [objective, setObjective] = useState("Autoridade");
-  const [ideasPerDay, setIdeasPerDay] = useState(2);
-  const [additionalInstructions, setAdditionalInstructions] = useState("");
-  const [generating, setGenerating] = useState(false);
+function getDayKey(year: number, month: number, day: number): string {
+  const m = String(month + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
 
-  // Carousel modal
-  const [carouselModal, setCarouselModal] = useState<{ idea: Idea; postId: string } | null>(null);
-  const [carouselGenerating, setCarouselGenerating] = useState<{ progress: number; text: string } | null>(null);
+/* ────────────────────────────────────────────────────────────────────────
+   DayPanel: Right sidebar showing events for selected day
+   ──────────────────────────────────────────────────────────────────────── */
 
-  const [toast, setToast] = useState("");
-  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 3000); };
+interface DayPanelProps {
+  year: number;
+  month: number;
+  day: number | null;
+  events: CalendarEvent[];
+}
 
-  const fetchPosts = useCallback(async () => {
-    try {
-      const r = await fetch("/api/calendar");
-      const d = await r.json();
-      if (d.posts) setPosts(d.posts);
-    } catch {
-      showToast("Erro ao carregar calendário.");
-    } finally {
-      setLoadingPosts(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchPosts(); }, [fetchPosts]);
-
-  // Build calendar grid for current month
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  // Map of date string -> post
-  const postsByDate = new Map<string, ScheduledPost>();
-  posts.forEach((p) => {
-    const d = new Date(p.date);
-    postsByDate.set(toLocalDateStr(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())), p);
-  });
-
-  function getDayStr(day: number): string {
-    return `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+function DayPanel({ year, month, day, events }: DayPanelProps) {
+  if (day === null) {
+    return (
+      <div className="sticky top-12 w-80 border-l border-border-subtle">
+        <Card density="dense" className="m-4">
+          <div className="text-center py-8 text-text-tertiary text-body">
+            Selecione um dia para ver os carrosséis agendados.
+          </div>
+        </Card>
+      </div>
+    );
   }
 
-  function toggleDay(day: number) {
-    const str = getDayStr(day);
-    if (postsByDate.has(str)) {
-      // Click on planned day: show panel
-      setPanelDay(str === panelDay ? null : str);
-      return;
-    }
-    const isPast = new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    if (isPast) return;
-    setSelectedDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(str)) next.delete(str); else next.add(str);
-      return next;
-    });
-    setPanelDay(null);
-  }
-
-  async function handleGenerate() {
-    if (selectedDays.size === 0) { showToast("Selecione pelo menos um dia."); return; }
-    if (!niche.trim()) { showToast("Informe o nicho."); return; }
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/calendar/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dates: Array.from(selectedDays).sort(),
-          ideasPerDay,
-          niche,
-          objective,
-          additionalInstructions,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || "Erro ao gerar."); return; }
-      setPosts((prev) => {
-        const updated = [...prev];
-        for (const newPost of data.posts) {
-          const d = new Date(newPost.date);
-          const dateStr = toLocalDateStr(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-          const idx = updated.findIndex((p) => {
-            const pd = new Date(p.date);
-            return toLocalDateStr(new Date(pd.getUTCFullYear(), pd.getUTCMonth(), pd.getUTCDate())) === dateStr;
-          });
-          if (idx >= 0) updated[idx] = newPost;
-          else updated.push(newPost);
-        }
-        return updated;
-      });
-      setSelectedDays(new Set());
-      showToast(`Ideias geradas para ${data.posts.length} dia(s)!`);
-    } catch {
-      showToast("Erro ao gerar ideias.");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function handleDeleteDay(postId: string) {
-    if (!confirm("Remover todas as ideias deste dia?")) return;
-    await fetch(`/api/calendar?id=${postId}`, { method: "DELETE" });
-    setPosts((prev) => prev.filter((p) => p._id !== postId));
-    setPanelDay(null);
-    showToast("Dia removido do calendário.");
-  }
-
-  async function handleCarouselGenerate(settings: GenerateSettings) {
-    if (!carouselModal) return;
-    const modalRef = carouselModal;
-    setCarouselModal(null);
-    setCarouselGenerating({ progress: 0, text: GEN_STEPS[0] });
-
-    for (let i = 1; i < GEN_STEPS.length - 2; i++) {
-      await new Promise((r) => setTimeout(r, 600));
-      setCarouselGenerating({ progress: i, text: GEN_STEPS[i] });
-    }
-
-    const res = await fetch("/api/carousel/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings),
-    });
-    const data = await res.json();
-    setCarouselGenerating({ progress: 5, text: GEN_STEPS[5] });
-    await new Promise((r) => setTimeout(r, 300));
-    setCarouselGenerating(null);
-
-    if (!res.ok) { showToast(`Erro: ${data.error}`); return; }
-
-    // Mark idea as done
-    await fetch(`/api/calendar/${modalRef.postId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ideaId: modalRef.idea.id, carouselId: data.carousel._id }),
-    });
-
-    // Update local state
-    setPosts((prev) => prev.map((p) => {
-      if (p._id !== modalRef.postId) return p;
-      return { ...p, ideas: p.ideas.map((idea) => idea.id === modalRef.idea.id ? { ...idea, status: "done" as const, carouselId: data.carousel._id } : idea) };
-    }));
-
-    showToast("Carrossel gerado! Redirecionando...");
-    router.push(`/dashboard/editor/${data.carousel._id}`);
-  }
-
-  const panelPost = panelDay ? postsByDate.get(panelDay) : null;
-
-  // suppress unused warning
-  void loadingPosts;
+  const dayKey = getDayKey(year, month, day);
+  const dayEvents = events.filter((e) => e.date === dayKey);
 
   return (
-    <div className="main">
-      <div className="topbar">
-        <div className="tb-left">
-          <h1>Planejador de Conteúdo</h1>
-          <p>Planeje sua linha editorial e gere carrosséis com 1 clique</p>
-        </div>
-        <div className="tb-right">
-          {selectedDays.size > 0 && (
-            <span style={{ fontSize: 13, color: "var(--muted)" }}>
-              {selectedDays.size} dia{selectedDays.size > 1 ? "s" : ""} selecionado{selectedDays.size > 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
+    <div className="sticky top-12 w-80 border-l border-border-subtle">
+      <div className="p-4 border-b border-border-subtle">
+        <h3 className="text-h3 text-text-primary">
+          {formatDatePT(year, month, day)}
+        </h3>
       </div>
 
-      <div className="content" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
-        {/* ── CALENDAR ── */}
-        <div>
-          {/* Month nav */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <button
-              className="btn btn-ghost"
-              style={{ padding: "8px 14px" }}
-              onClick={() => {
-                if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-                else setViewMonth(m => m - 1);
-              }}
-            >←</button>
-            <h2 style={{ fontSize: 20, fontWeight: 500, color: "#fff", letterSpacing: "-0.02em" }}>
-              {MONTHS_PT[viewMonth]} {viewYear}
-            </h2>
-            <button
-              className="btn btn-ghost"
-              style={{ padding: "8px 14px" }}
-              onClick={() => {
-                if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-                else setViewMonth(m => m + 1);
-              }}
-            >→</button>
+      <div className="p-4">
+        {dayEvents.length === 0 ? (
+          <div className="text-center py-8 text-text-tertiary text-body">
+            Nenhum carrossel agendado para este dia.
           </div>
-
-          {/* Day headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 }}>
-            {DAYS_PT.map((d) => (
-              <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "var(--dim)", letterSpacing: ".08em", textTransform: "uppercase", padding: "6px 0" }}>{d}</div>
-            ))}
-          </div>
-
-          {/* Calendar cells */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-            {cells.map((day, idx) => {
-              if (!day) return <div key={`empty-${idx}`} />;
-              const dateStr = getDayStr(day);
-              const isToday = dateStr === toLocalDateStr(today);
-              const isPast = new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              const hasPost = postsByDate.has(dateStr);
-              const post = postsByDate.get(dateStr);
-              const isSelected = selectedDays.has(dateStr);
-              const isPanelOpen = panelDay === dateStr;
-              const doneCount = post?.ideas.filter(i => i.status === "done").length || 0;
-              const totalCount = post?.ideas.length || 0;
-
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => toggleDay(day)}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: 12,
-                    border: isPanelOpen
-                      ? "1px solid rgba(168,85,247,.6)"
-                      : isSelected
-                      ? "1px solid rgba(34,211,238,.5)"
-                      : isToday
-                      ? "1px solid rgba(168,85,247,.4)"
-                      : "1px solid var(--b)",
-                    background: isPanelOpen
-                      ? "rgba(168,85,247,.15)"
-                      : isSelected
-                      ? "rgba(34,211,238,.08)"
-                      : hasPost
-                      ? "rgba(168,85,247,.06)"
-                      : "var(--bg2)",
-                    cursor: isPast && !hasPost ? "default" : "pointer",
-                    opacity: isPast && !hasPost ? 0.35 : 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 4,
-                    padding: 4,
-                    transition: "all .15s",
-                    position: "relative",
-                  }}
-                >
-                  <span style={{
-                    fontSize: 15, fontWeight: isToday ? 600 : 400,
-                    color: isSelected ? "#22D3EE" : isPanelOpen ? "#C4B5FD" : isToday ? "#A855F7" : hasPost ? "#fff" : "var(--muted)",
-                  }}>
-                    {day}
-                  </span>
-                  {hasPost && (
-                    <div style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
-                      {Array.from({ length: Math.min(totalCount, 3) }).map((_, i) => (
-                        <div key={i} style={{
-                          width: 5, height: 5, borderRadius: "50%",
-                          background: i < doneCount ? "#4ADE80" : "#A855F7",
-                        }} />
-                      ))}
-                      {totalCount > 3 && <span style={{ fontSize: 8, color: "var(--dim)" }}>+{totalCount - 3}</span>}
+        ) : (
+          <div className="space-y-3">
+            {dayEvents.map((event) => (
+              <Card key={event.id} interactive density="dense" className="cursor-pointer">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-12 h-12 rounded bg-bg-surface-2 border border-border-subtle" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-body font-medium text-text-primary truncate">
+                      {event.title}
                     </div>
-                  )}
-                  {isSelected && (
-                    <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#22D3EE" }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: "flex", gap: 20, marginTop: 16, flexWrap: "wrap" }}>
-            {[
-              { color: "rgba(34,211,238,.5)", label: "Dia selecionado" },
-              { color: "#A855F7", label: "Com ideias" },
-              { color: "#4ADE80", label: "Carrossel gerado" },
-            ].map((l) => (
-              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--muted)" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.color }} />
-                {l.label}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── RIGHT PANEL ── */}
-        <div style={{ position: "sticky", top: 88, display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Panel: planned day ideas */}
-          {panelPost && panelDay && (
-            <div className="card" style={{ padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
-                    {new Date(panelPost.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
-                    {panelPost.niche} · {panelPost.objective}
+                    {event.time && (
+                      <div className="text-caption text-text-secondary">
+                        {event.time}
+                      </div>
+                    )}
+                    {event.status && (
+                      <div className="text-caption text-text-tertiary mt-1">
+                        {event.status}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteDay(panelPost._id)}
-                  style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(239,68,68,.2)", background: "rgba(239,68,68,.06)", color: "#f87171", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}
-                >×</button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   CalendarGrid: Main month view with day cells
+   ──────────────────────────────────────────────────────────────────────── */
+
+interface CalendarGridProps {
+  year: number;
+  month: number;
+  selected: number | null;
+  onSelect: (day: number) => void;
+  events: CalendarEvent[];
+}
+
+function CalendarGrid({ year, month, selected, onSelect, events }: CalendarGridProps) {
+  const grid = buildGrid(year, month);
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const todayDate = isCurrentMonth ? today.getDate() : -1;
+
+  const dayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"];
+
+  return (
+    <div className="flex-1 p-4">
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-px bg-border-subtle rounded-t-lg overflow-hidden mb-px">
+        {dayNames.map((name) => (
+          <div
+            key={name}
+            className="bg-bg-surface-2 py-3 px-2 text-center text-caption font-medium text-text-secondary"
+          >
+            {name}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-px bg-border-subtle rounded-b-lg overflow-hidden">
+        {grid.map((day, idx) => {
+          const isOtherMonth = day === null;
+          const isToday = day === todayDate && isCurrentMonth;
+          const isSelected = day === selected;
+          const dayKey = day ? getDayKey(year, month, day) : null;
+          const dayEvents = dayKey ? events.filter((e) => e.date === dayKey) : [];
+
+          return (
+            <div
+              key={idx}
+              onClick={() => !isOtherMonth && day && onSelect(day)}
+              className={`
+                bg-bg-surface min-h-[88px] p-2 transition-colors duration-fast
+                ${!isOtherMonth ? "cursor-pointer hover:bg-bg-surface-2" : "bg-bg-surface-2"}
+                ${isSelected ? "ring-2 ring-accent ring-inset" : ""}
+              `}
+            >
+              <div className="flex items-start gap-1 mb-2">
+                <div className={`text-body font-medium ${isOtherMonth ? "text-text-tertiary" : "text-text-primary"}`}>
+                  {day}
+                </div>
+                {isToday && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1" />
+                )}
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {panelPost.ideas.map((idea, idx) => (
+              {/* Event pills */}
+              <div className="space-y-1">
+                {dayEvents.slice(0, 3).map((event) => (
                   <div
-                    key={idea.id}
-                    style={{
-                      background: "var(--bg3)", border: "1px solid var(--b)", borderRadius: 12, padding: "14px 16px",
-                      borderLeftColor: idea.status === "done" ? "#4ADE80" : "rgba(168,85,247,.4)",
-                      borderLeftWidth: 3,
-                    }}
+                    key={event.id}
+                    className="text-[11px] px-2 py-1 rounded bg-accent-muted text-accent truncate"
                   >
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "#fff", lineHeight: 1.4 }}>
-                        <span style={{ fontSize: 10, color: "var(--dim)", fontWeight: 400, marginRight: 6 }}>#{idx + 1}</span>
-                        {idea.title}
-                      </div>
-                      {idea.status === "done" && <span style={{ fontSize: 10, fontWeight: 600, color: "#4ADE80", background: "rgba(74,222,128,.1)", border: "1px solid rgba(74,222,128,.2)", borderRadius: 999, padding: "2px 8px", flexShrink: 0 }}>Criado ✓</span>}
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.55, marginBottom: 10 }}>{idea.description}</div>
-                    {idea.hook && (
-                      <div style={{ fontSize: 11, color: "rgba(168,85,247,.8)", fontStyle: "italic", marginBottom: 10 }}>
-                        &ldquo;{idea.hook}&rdquo;
-                      </div>
-                    )}
-                    {idea.status === "pending" ? (
-                      <button
-                        className="btn btn-pri"
-                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 14px" }}
-                        onClick={() => setCarouselModal({ idea, postId: panelPost._id })}
-                      >
-                        ✦ Gerar Carrossel
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-ghost"
-                        style={{ width: "100%", justifyContent: "center", fontSize: 12, padding: "8px 14px" }}
-                        onClick={() => idea.carouselId && router.push(`/dashboard/editor/${idea.carouselId}`)}
-                      >
-                        Ver carrossel →
-                      </button>
-                    )}
+                    {event.title}
                   </div>
                 ))}
+                {dayEvents.length > 3 && (
+                  <div className="text-[11px] px-2 py-1 text-text-secondary">
+                    +{dayEvents.length - 3}
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-          {/* Briefing form */}
-          {!panelPost && (
-            <div className="card" style={{ padding: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 500, color: "#fff", marginBottom: 4 }}>Briefing de Conteúdo</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.5 }}>
-                Selecione os dias no calendário e preencha o briefing para gerar ideias de carrosséis virais.
-              </div>
+/* ────────────────────────────────────────────────────────────────────────
+   Calendar Page
+   ──────────────────────────────────────────────────────────────────────── */
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.5)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Nicho *</div>
-                  <input
-                    className="input"
-                    value={niche}
-                    onChange={(e) => setNiche(e.target.value)}
-                    placeholder="ex: Marketing Digital, Fitness, Finanças..."
-                    style={{ width: "100%" }}
-                  />
-                </div>
+export default function CalendarPage() {
+  const today = new Date();
+  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
+  const [view, setView] = useState<ViewMode>("mês");
+  const [selected, setSelected] = useState<number | null>(today.getDate());
 
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.5)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Objetivo</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {OBJECTIVES.map((obj) => (
-                      <button
-                        key={obj}
-                        onClick={() => setObjective(obj)}
-                        style={{
-                          padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 400,
-                          background: objective === obj ? "rgba(108,39,190,.2)" : "rgba(255,255,255,.04)",
-                          border: objective === obj ? "1px solid rgba(168,85,247,.4)" : "1px solid var(--b)",
-                          color: objective === obj ? "#C4B5FD" : "var(--muted)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {obj}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+  // Mock events (in real implementation, fetch from API)
+  const [events] = useState<CalendarEvent[]>([
+    {
+      id: "1",
+      title: "Carousel 1",
+      date: getDayKey(today.getFullYear(), today.getMonth(), today.getDate()),
+      time: "10:00",
+      status: "scheduled",
+    },
+    {
+      id: "2",
+      title: "Carousel 2",
+      date: getDayKey(today.getFullYear(), today.getMonth(), today.getDate()),
+      time: "14:30",
+      status: "published",
+    },
+    {
+      id: "3",
+      title: "Carousel 3",
+      date: getDayKey(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+      status: "draft",
+    },
+  ]);
 
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.5)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>
-                    Ideias por dia: <span style={{ color: "#A855F7" }}>{ideasPerDay}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setIdeasPerDay(n)}
-                        style={{
-                          width: 36, height: 36, borderRadius: 8, fontSize: 14, fontWeight: 500,
-                          background: ideasPerDay === n ? "rgba(108,39,190,.2)" : "rgba(255,255,255,.04)",
-                          border: ideasPerDay === n ? "1px solid rgba(168,85,247,.4)" : "1px solid var(--b)",
-                          color: ideasPerDay === n ? "#C4B5FD" : "var(--muted)",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+  const handlePrevMonth = () => {
+    setCursor((prev) => {
+      if (prev.month === 0) {
+        return { year: prev.year - 1, month: 11 };
+      }
+      return { ...prev, month: prev.month - 1 };
+    });
+  };
 
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.5)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 }}>Instruções adicionais</div>
-                  <textarea
-                    className="textarea"
-                    value={additionalInstructions}
-                    onChange={(e) => setAdditionalInstructions(e.target.value)}
-                    placeholder="ex: Foco em resultados rápidos, use linguagem jovem..."
-                    style={{ width: "100%", minHeight: 72, fontSize: 13 }}
-                  />
-                </div>
+  const handleNextMonth = () => {
+    setCursor((prev) => {
+      if (prev.month === 11) {
+        return { year: prev.year + 1, month: 0 };
+      }
+      return { ...prev, month: prev.month + 1 };
+    });
+  };
 
-                <button
-                  className="btn btn-pri"
-                  style={{
-                    width: "100%", justifyContent: "center", padding: "12px 20px",
-                    fontSize: 14, opacity: selectedDays.size === 0 || generating ? 0.6 : 1,
-                  }}
-                  onClick={handleGenerate}
-                  disabled={selectedDays.size === 0 || generating || !niche.trim()}
-                >
-                  {generating ? (
-                    "Gerando ideias..."
-                  ) : selectedDays.size === 0 ? (
-                    "Selecione dias no calendário"
-                  ) : (
-                    `✦ Gerar ideias para ${selectedDays.size} dia${selectedDays.size > 1 ? "s" : ""}`
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+  const handleToday = () => {
+    const now = new Date();
+    setCursor({ year: now.getFullYear(), month: now.getMonth() });
+    setSelected(now.getDate());
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-8 py-6 border-b border-border-subtle">
+        <h1 className="text-h2 text-text-primary">
+          {formatMonthYear(cursor.year, cursor.month)}
+        </h1>
+
+        <div className="flex items-center gap-4">
+          {/* Navigation buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="md"
+              iconLeft={<ChevronLeft size={18} />}
+              onClick={handlePrevMonth}
+              aria-label="Mês anterior"
+            />
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={handleToday}
+            >
+              Hoje
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              iconLeft={<ChevronRight size={18} />}
+              onClick={handleNextMonth}
+              aria-label="Próximo mês"
+            />
+          </div>
+
+          {/* View toggles */}
+          <div className="flex gap-2 border-l border-border-subtle pl-4">
+            {(["mês", "semana", "lista"] as ViewMode[]).map((v) => (
+              <Chip
+                key={v}
+                active={view === v}
+                onClick={() => setView(v)}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </Chip>
+            ))}
+          </div>
+
+          {/* Schedule button */}
+          <Button
+            variant="primary"
+            size="md"
+            iconLeft={<Plus size={18} />}
+            className="ml-4"
+          >
+            Agendar
+          </Button>
         </div>
       </div>
 
-      {/* CreateModal for carousel generation */}
-      {carouselModal && (
-        <CreateModal
-          onClose={() => setCarouselModal(null)}
-          onGenerate={handleCarouselGenerate}
-          prefill={{
-            theme: carouselModal.idea.title + (carouselModal.idea.hook ? "\n\nHook: " + carouselModal.idea.hook : ""),
-            tone: carouselModal.idea.tone as "direct" | "editorial" | "didactic" | "provocative" | "casual" | "authoritive",
-          }}
-        />
-      )}
+      {/* Main content + sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {view === "mês" && (
+          <>
+            <CalendarGrid
+              year={cursor.year}
+              month={cursor.month}
+              selected={selected}
+              onSelect={setSelected}
+              events={events}
+            />
+            <DayPanel
+              year={cursor.year}
+              month={cursor.month}
+              day={selected}
+              events={events}
+            />
+          </>
+        )}
 
-      {carouselGenerating && <GenOverlay progress={carouselGenerating.progress} statusText={carouselGenerating.text} />}
-      {toast && <Toast msg={toast} />}
+        {view === "semana" && (
+          <div className="flex-1 flex items-center justify-center text-text-secondary">
+            <div className="text-center">
+              <div className="text-h3 mb-2">Vista de Semana</div>
+              <div className="text-body">Em breve...</div>
+            </div>
+          </div>
+        )}
+
+        {view === "lista" && (
+          <div className="flex-1 flex items-center justify-center text-text-secondary">
+            <div className="text-center">
+              <div className="text-h3 mb-2">Vista de Lista</div>
+              <div className="text-body">Em breve...</div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
