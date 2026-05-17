@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Sparkles, MessageCircle, X } from "lucide-react";
+import { Send, Sparkles, MessageCircle, X, ArrowLeft, Undo2, Redo2, MoreHorizontal, Save, ChevronDown } from "lucide-react";
 import Icon from "./Icon";
 import SlidePreview, { resolveBgStyle, CANVAS_W, CANVAS_H } from "./SlidePreview";
 import Toast from "./Toast";
 import { ICarousel, ISlide, IElement } from "@/models/Carousel";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { cn } from "@/lib/cn";
 
 interface ChatMsg { role: "user" | "assistant"; content: string; actions?: string[]; }
 import {
@@ -35,6 +38,8 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [propsTab, setPropsTab] = useState("design");
   const [history, setHistory] = useState<(Draft & { _id?: string })[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [titleEditing, setTitleEditing] = useState(false);
   const [regenTarget, setRegenTarget] = useState<{ slideIndex: number; elementId?: string } | null>(null);
   const [regenLoading, setRegenLoading] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<string | null>(null);
@@ -222,6 +227,17 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
 
   const slide = draft.slides[selectedSlide];
   const el = slide && selectedEl ? slide.elements.find((e) => e.id === selectedEl) || null : null;
+
+  const pendingImages = draft.slides.flatMap((s, sIdx) => {
+    const pending: { slideIndex: number; elementId?: string }[] = [];
+    if (s.imagePrompt && !s.bgImageUrl) pending.push({ slideIndex: sIdx });
+    s.elements.forEach((e) => {
+      if (e.type === "image" && e.imagePrompt && !e.imageUrl) {
+        pending.push({ slideIndex: sIdx, elementId: e.id });
+      }
+    });
+    return pending;
+  });
 
   const pushHistory = useCallback(() => {
     setHistory((h) => [...h.slice(-19), JSON.parse(JSON.stringify(draft))]);
@@ -568,8 +584,13 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave(draft);
-    setSaving(false);
+    try {
+      await onSave(draft);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const accentColor = draft.accentColor || "#FFD700";
@@ -609,9 +630,101 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           gridTemplateAreas: `"topbar topbar topbar" "filmstrip canvas inspector"`,
         }}
       >
-        {/* Task 4: TOPBAR */}
-        <header style={{ gridArea: "topbar" }} className="flex items-center gap-2 px-4 bg-bg-surface border-b border-border-subtle">
-          <span className="text-caption text-text-tertiary">Topbar — Task 4</span>
+        {/* ── TOPBAR ── */}
+        <header
+          style={{ gridArea: "topbar" }}
+          className="flex items-center gap-2 px-4 bg-bg-surface border-b border-border-subtle shrink-0 h-14"
+        >
+          {/* Voltar */}
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0">
+            <ArrowLeft size={15} strokeWidth={1.5} />
+            Voltar
+          </Button>
+
+          <div className="h-5 w-px bg-border-subtle mx-1" />
+
+          {/* Título editável */}
+          <input
+            className="bg-transparent text-body-strong text-text-primary border-b border-transparent focus:border-accent outline-none max-w-[260px] truncate transition-colors duration-200"
+            value={draft.title ?? "Sem título"}
+            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+            onFocus={() => setTitleEditing(true)}
+            onBlur={() => setTitleEditing(false)}
+            aria-label="Título do carrossel"
+          />
+
+          {/* Badge status */}
+          <span className={cn(
+            "text-micro px-1.5 py-0.5 rounded-xs whitespace-nowrap",
+            saving
+              ? "text-accent bg-accent-muted"
+              : saved
+                ? "text-state-success bg-state-success/10"
+                : "text-text-tertiary bg-bg-surface-2"
+          )}>
+            {saving ? "Salvando…" : saved ? "Salvo" : "Rascunho"}
+          </span>
+
+          {/* Espaçador */}
+          <div className="flex-1" />
+
+          {/* Contador de slides */}
+          <span className="text-caption text-text-tertiary tnum shrink-0">
+            Slide {selectedSlide + 1} de {draft.slides.length}
+          </span>
+
+          <div className="h-5 w-px bg-border-subtle mx-1" />
+
+          {/* Undo / Redo */}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={history.length === 0}
+            onClick={undo}
+            title="Desfazer (⌘Z)"
+            className="px-2 shrink-0"
+          >
+            <Undo2 size={15} strokeWidth={1.5} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Refazer"
+            className="px-2 shrink-0"
+          >
+            <Redo2 size={15} strokeWidth={1.5} />
+          </Button>
+
+          <div className="h-5 w-px bg-border-subtle mx-1" />
+
+          {/* Gerar imagens — só aparece se houver pendentes */}
+          {pendingImages.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setRegenTarget({ slideIndex: pendingImages[0].slideIndex, elementId: pendingImages[0].elementId })}
+              className="gap-1.5 shrink-0"
+            >
+              <Sparkles size={14} strokeWidth={1.5} />
+              Gerar imagens
+            </Button>
+          )}
+
+          {/* Salvar */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving}
+            className="shrink-0"
+          >
+            Salvar
+          </Button>
+
+          {/* Menu ⋯ */}
+          <Button variant="ghost" size="sm" className="px-2 shrink-0" title="Mais opções">
+            <MoreHorizontal size={15} strokeWidth={1.5} />
+          </Button>
         </header>
 
         {/* Task 5: FILMSTRIP */}
