@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Newspaper, Calendar, BookOpen, Settings, Plus, PanelLeft, LogOut } from "lucide-react";
+import { LayoutDashboard, Newspaper, Rss, Calendar, BookOpen, Settings, Plus, PanelLeft, LogOut } from "lucide-react";
 import { SidebarItem } from "@/components/ui/SidebarItem";
 import { LogoMark, LogoLockup } from "@/components/Logo";
 import { useSidebarPinned } from "@/hooks/useSidebarPinned";
@@ -67,6 +67,7 @@ export default function Sidebar(_props: SidebarProps = {}) {
         {expanded && <div className="text-micro text-text-tertiary px-2.5 mt-1 mb-1">BIBLIOTECA</div>}
         <SidebarItem href="/dashboard" icon={ICON(LayoutDashboard)} label="Dashboard" shortcut="g d" active={pathname === "/dashboard"} expanded={expanded} />
         <SidebarItem href="/dashboard/news" icon={ICON(Newspaper)} label="Modo Notícia" shortcut="g n" active={!!isActive("/dashboard/news")} expanded={expanded} />
+        <SidebarItem href="/dashboard/news-pro" icon={ICON(Rss)} label="Notícia PRO" shortcut="g p" active={!!isActive("/dashboard/news-pro")} expanded={expanded} />
         <SidebarItem href="/dashboard/calendar" icon={ICON(Calendar)} label="Calendário" shortcut="g c" active={!!isActive("/dashboard/calendar")} expanded={expanded} />
         <SidebarItem href="/dashboard/context" icon={ICON(BookOpen)} label="Contexto" shortcut="g x" active={!!isActive("/dashboard/context")} expanded={expanded} />
       </nav>
