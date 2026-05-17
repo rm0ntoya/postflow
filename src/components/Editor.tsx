@@ -248,6 +248,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     if (!history.length) return;
     setDraft(history[history.length - 1]);
     setHistory((h) => h.slice(0, -1));
+    setHistoryIndex((idx) => Math.max(0, idx - 1));
   };
 
   const redo = useCallback(() => {
