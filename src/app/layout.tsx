@@ -5,8 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "NovaCraft — Gerador de Carrosséis para Instagram",
-  description: "Crie carrosséis virais com IA usando sua chave Gemini.",
+  title: "NovaCraft — Carrosséis em segundos",
+  description: "Crie carrosséis profissionais com IA. Modo Notícia transforma qualquer matéria em post viral.",
+  themeColor: "#0A0A0B",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
