@@ -37,6 +37,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [zoom, setZoom] = useState(0.38);
   const [propsTab, setPropsTab] = useState("design");
   const [history, setHistory] = useState<(Draft & { _id?: string })[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [titleEditing, setTitleEditing] = useState(false);
@@ -248,6 +249,14 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     setDraft(history[history.length - 1]);
     setHistory((h) => h.slice(0, -1));
   };
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setDraft(history[nextIndex]);
+    }
+  }, [history, historyIndex]);
 
   const updateSlide = (idx: number, patch: Partial<ISlide>) => {
     pushHistory();
@@ -689,6 +698,8 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           <Button
             variant="ghost"
             size="sm"
+            disabled={historyIndex >= history.length - 1}
+            onClick={redo}
             title="Refazer"
             className="px-2 shrink-0"
           >
