@@ -6,7 +6,8 @@
     "node": ">=18.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently --names \"next,api\" --prefix-colors \"cyan,yellow\" \"next dev\" \"npm run dev:api\"",
+    "dev:api": "cd api && npx tsx watch src/server.ts",
     "build": "next build",
     "start": "node server.js"
   },
@@ -35,8 +36,10 @@
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
+    "tsx": "^4.7.0",
     "typescript": "^5.4.5"
   }
 }
