@@ -578,294 +578,19 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     idx === 0 ? "Capa" : idx === draft.slides.length - 1 ? "CTA" : "Desenvolvimento";
 
   return (
-    <div className="editor">
+    <>
+      {/* ── Toast global ── */}
+      {toast && <Toast msg={toast} />}
 
-      {/* ── TOPBAR UNIFICADA ── */}
-      <div className="editor-topbar">
-        <div className="tb-left">
-          <button className="tb-back" onClick={onBack} title="Voltar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          </button>
-          <input
-            className="tb-title"
-            value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-          />
-          <span className="tb-meta">1080 × 1350 · {saving ? "salvando…" : "salvo"}</span>
-        </div>
-
-        <div className="tb-tools">
-          <button className="tool-btn active" title="Selecionar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 2l8 20 2-8 8-2L2 2z"/></svg>
-          </button>
-          <div className="tool-sep"/>
-          <button className="tool-btn" onClick={addText} title="Texto"><Icon name="type" size={15}/></button>
-          <button className="tool-btn" onClick={addImage} title="Imagem"><Icon name="image" size={15}/></button>
-          <button className="tool-btn" onClick={addShape} title="Forma"><Icon name="shapes" size={15}/></button>
-          <button className="tool-btn" onClick={addProfileEl} title="Perfil">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </button>
-          <div className="tool-sep"/>
-          <button className="tool-btn" onClick={undo} disabled={!history.length} title="Desfazer (⌘Z)">
-            <Icon name="undo" size={15}/>
-          </button>
-        </div>
-
-        <div className="tb-right">
-          <div className="view-toggle">
-            <button
-              className={`vt-btn ${viewMode === "isolated" ? "active" : ""}`}
-              onClick={() => setViewMode("isolated")}
-              title="Slide isolado"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-            </button>
-            <button
-              className={`vt-btn ${viewMode === "all" ? "active" : ""}`}
-              onClick={() => setViewMode("all")}
-              title="Todos os slides"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="6" height="12" rx="1"/><rect x="10" y="6" width="6" height="12" rx="1"/><rect x="18" y="6" width="4" height="12" rx="1"/></svg>
-            </button>
-          </div>
-          <div className="editor-zoom">
-            <button onClick={() => setZoom((z) => Math.max(0.2, z - 0.05))}>−</button>
-            <span>{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(0.8, z + 0.05))}>+</button>
-          </div>
-          <button className="btn btn-ghost" onClick={handleDownloadZip} disabled={!!exportProgress}>
-            <Icon name="download"/> {exportProgress || "Baixar"}
-          </button>
-          <button className="btn btn-ghost" onClick={handleSave} disabled={saving}>
-            <Icon name="check"/> Salvar
-          </button>
-        </div>
-      </div>
-
-      {/* ── SIDEBAR ESQUERDA ── */}
-      <div className="editor-sidebar">
-        <div className="sl-header">
-          <span className="sl-label">Slides</span>
-          <span className="sl-count">{draft.slides.length}</span>
-        </div>
-        <div className="sl-thumbs">
-          {draft.slides.map((s, i) => (
-            <div
-              key={s.id}
-              className={`slide-thumb-wrap ${selectedSlide === i ? "selected" : ""}`}
-              onClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
-            >
-              <span className="slide-thumb-num">{String(i + 1).padStart(2, "0")}</span>
-              <div className="slide-thumb-frame">
-                <SlidePreview
-                  slide={s}
-                  scale={THUMB_SCALE}
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: 6 }}
-                />
-                {generatingSlide === i && (
-                  <div style={{ position: "absolute", inset: 0, background: "rgba(108,39,190,.2)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 5 }}>
-                    <div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite" }}/>
-                  </div>
-                )}
-              </div>
-              <div className="slide-thumb-actions">
-                <button
-                  className="slide-thumb-act"
-                  title="Duplicar"
-                  onClick={(e) => { e.stopPropagation(); duplicateSlide(i); }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
-                <button
-                  className="slide-thumb-act danger"
-                  title="Excluir"
-                  onClick={(e) => { e.stopPropagation(); deleteSlide(i); }}
-                  disabled={draft.slides.length === 1}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-              </div>
-            </div>
-          ))}
-          <button className="slide-thumb-add" onClick={() => setShowAddSlide(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Adicionar
-          </button>
-        </div>
-      </div>
-
-      {/* ── CANVAS ── */}
-      <div className="editor-canvas" ref={stageRef} onClick={() => setSelectedEl(null)}>
-
-        {viewMode === "isolated" ? (
-          <div className="editor-canvas-isolated">
-            <div className="editor-canvas-isolated-inner">
-              {slide && (
-                <SlideCanvas
-                  slide={slide}
-                  index={selectedSlide}
-                  selected={true}
-                  selectedEl={selectedEl}
-                  zoom={zoom}
-                  isGenerating={generatingSlide === selectedSlide}
-                  generatingProgress={generatingProgress}
-                  regenLoading={regenLoading === `${selectedSlide}-bg`}
-                  onSlideClick={() => setSelectedEl(null)}
-                  onElMouseDown={onElMouseDown}
-                  onElDblClick={(elId) => setSelectedEl(elId)}
-                  onTextChange={(elId, text) => updateEl(selectedSlide, elId, { text })}
-                  onRegenBg={() => setRegenTarget({ slideIndex: selectedSlide })}
-                />
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="editor-canvas-all">
-            <div className="editor-stage">
-              {draft.slides.map((s, i) => (
-                <SlideCanvas
-                  key={s.id}
-                  slide={s}
-                  index={i}
-                  selected={selectedSlide === i}
-                  selectedEl={selectedSlide === i ? selectedEl : null}
-                  zoom={zoom}
-                  isGenerating={generatingSlide === i}
-                  generatingProgress={generatingProgress}
-                  regenLoading={regenLoading === `${i}-bg`}
-                  onSlideClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
-                  onElMouseDown={onElMouseDown}
-                  onElDblClick={(elId) => { setSelectedSlide(i); setSelectedEl(elId); }}
-                  onTextChange={(elId, text) => updateEl(i, elId, { text })}
-                  onRegenBg={() => setRegenTarget({ slideIndex: i })}
-                />
-              ))}
-              <button
-                className="slide-frame-add"
-                onClick={(e) => { e.stopPropagation(); setShowAddSlide(true); }}
-                title="Adicionar slide"
-              >
-                <Icon name="plus" size={18}/>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── FAB + CHAT FLUTUANTE ── */}
-        <div className="fab-wrap">
-          {chatOpen && (
-            <div className="chat-popup" onClick={(e) => e.stopPropagation()}>
-              <div className="chat-popup-header">
-                <div className="chat-popup-icon">
-                  <MessageCircle size={14}/>
-                </div>
-                <div>
-                  <div className="chat-popup-title">Agente IA</div>
-                  <div className="chat-popup-sub">Edite por texto</div>
-                </div>
-                <button className="chat-popup-close" onClick={() => setChatOpen(false)}>
-                  <X size={11}/>
-                </button>
-              </div>
-
-              <div className="chat-popup-msgs">
-                {chatMsgs.map((m, i) => (
-                  <div key={i} className={`chat-msg ${m.role}`}>
-                    <div className="chat-bubble">{m.content}</div>
-                    {m.actions?.map((a, j) => (
-                      <div key={j} className="chat-action-badge">
-                        <Sparkles size={9}/> {a}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-                {chatStreaming && (
-                  <div className="chat-msg assistant">
-                    <div className="chat-bubble-streaming">
-                      {chatStreaming}<span className="chat-cursor"/>
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef}/>
-              </div>
-
-              <div className="chat-popup-input">
-                <textarea
-                  className="chat-textarea"
-                  placeholder="Ex: mude o título do slide 1..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
-                  rows={1}
-                />
-                <button className="chat-send" onClick={sendChat} disabled={chatLoading || !chatInput.trim()}>
-                  <Send size={13}/>
-                </button>
-              </div>
-            </div>
-          )}
-
-          <button
-            className="fab-btn"
-            onClick={(e) => { e.stopPropagation(); setChatOpen((o) => !o); }}
-            title="Agente IA"
-          >
-            <MessageCircle size={18}/>
-            <div className="fab-dot"/>
-          </button>
-        </div>
-      </div>
-
-      {/* ── PROPS PANEL ── */}
-      <div className="props">
-        <div className="props-tabs">
-          <button className={`props-tab ${propsTab === "design" ? "active" : ""}`} onClick={() => setPropsTab("design")}>Design</button>
-          <button className={`props-tab ${propsTab === "background" ? "active" : ""}`} onClick={() => setPropsTab("background")}>Fundo</button>
-          <button className={`props-tab ${propsTab === "layers" ? "active" : ""}`} onClick={() => setPropsTab("layers")}>Camadas</button>
-        </div>
-
-        {propsTab === "design" && el?.type === "text" && (
-          <TextProps el={el} accentColor={accentColor} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)}/>
-        )}
-        {propsTab === "design" && el?.type === "shape" && (
-          <ShapeProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)}/>
-        )}
-        {propsTab === "design" && el?.type === "image" && (
-          <ImageProps
-            el={el}
-            update={(p) => updateEl(selectedSlide, el.id, p)}
-            onDelete={() => deleteEl(selectedSlide, el.id)}
-            onRegenerate={() => setRegenTarget({ slideIndex: selectedSlide, elementId: el.id })}
-          />
-        )}
-        {propsTab === "design" && el?.type === "profile" && (
-          <ProfileProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)}/>
-        )}
-        {propsTab === "design" && !el && slide && (
-          <SlidePropsPanel
-            slide={slide}
-            idx={selectedSlide}
-            totalSlides={draft.slides.length}
-            onDuplicate={() => duplicateSlide(selectedSlide)}
-            onDelete={() => deleteSlide(selectedSlide)}
-          />
-        )}
-        {propsTab === "background" && slide && (
-          <BackgroundPropsPanel
-            slide={slide}
-            update={(p) => updateSlide(selectedSlide, p)}
-            onRegenBg={slide.bgImageUrl ? () => setRegenTarget({ slideIndex: selectedSlide }) : undefined}
-          />
-        )}
-        {propsTab === "layers" && slide && (
-          <LayersList slide={slide} selected={selectedEl} onSelect={setSelectedEl} onDelete={(id) => deleteEl(selectedSlide, id)}/>
-        )}
-      </div>
-
+      {/* ── Regen Modal ── */}
       {regenTarget && (
-        <RegenImageModal onClose={() => setRegenTarget(null)} onConfirm={handleRegenImage}/>
+        <RegenImageModal
+          onClose={() => setRegenTarget(null)}
+          onConfirm={handleRegenImage}
+        />
       )}
 
+      {/* ── Add Slide Modal ── */}
       {showAddSlide && (
         <AddSlideModal
           onClose={() => setShowAddSlide(false)}
@@ -874,15 +599,37 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
         />
       )}
 
-      {addingSlide && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
-          <div style={{ width: 36, height: 36, border: "3px solid rgba(255,255,255,0.15)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 1s linear infinite" }}/>
-          <span style={{ color: "#fff", fontSize: 14 }}>Gerando slide com IA…</span>
-        </div>
-      )}
+      {/* ── Shell 4 zonas ── */}
+      <div
+        className="h-screen overflow-hidden bg-bg-base"
+        style={{
+          display: "grid",
+          gridTemplateRows: "56px 1fr",
+          gridTemplateColumns: "180px 1fr 280px",
+          gridTemplateAreas: `"topbar topbar topbar" "filmstrip canvas inspector"`,
+        }}
+      >
+        {/* Task 4: TOPBAR */}
+        <header style={{ gridArea: "topbar" }} className="flex items-center gap-2 px-4 bg-bg-surface border-b border-border-subtle">
+          <span className="text-caption text-text-tertiary">Topbar — Task 4</span>
+        </header>
 
-      {toast && <Toast msg={toast}/>}
-    </div>
+        {/* Task 5: FILMSTRIP */}
+        <aside style={{ gridArea: "filmstrip" }} className="bg-bg-surface border-r border-border-subtle overflow-y-auto">
+          <span className="text-caption text-text-tertiary p-4 block">Filmstrip — Task 5</span>
+        </aside>
+
+        {/* Task 6: CANVAS */}
+        <main style={{ gridArea: "canvas" }} className="relative overflow-auto bg-bg-base flex items-center justify-center">
+          <span className="text-caption text-text-tertiary">Canvas — Task 6</span>
+        </main>
+
+        {/* Task 7-10: INSPECTOR */}
+        <aside style={{ gridArea: "inspector" }} className="bg-bg-surface border-l border-border-subtle overflow-y-auto">
+          <span className="text-caption text-text-tertiary p-4 block">Inspector — Tasks 7-10</span>
+        </aside>
+      </div>
+    </>
   );
 }
 
