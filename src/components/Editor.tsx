@@ -30,6 +30,11 @@ interface EditorProps {
 
 const THUMB_SCALE = 176 / CANVAS_W;
 
+// Task 5 — Filmstrip thumbnail scaling
+const FILMSTRIP_THUMB_W = 156; // 180px - 2*12px padding
+const FILMSTRIP_THUMB_H = Math.round(FILMSTRIP_THUMB_W * (CANVAS_H / CANVAS_W));
+const FILMSTRIP_SCALE = FILMSTRIP_THUMB_W / CANVAS_W;
+
 export default function Editor({ carousel, generatingSlide = null, generatingProgress = 0, externallyGeneratedImages = {}, onBack, onSave }: EditorProps) {
   const [draft, setDraft] = useState<Draft & { _id?: string }>(() => JSON.parse(JSON.stringify(carousel)));
   const [selectedSlide, setSelectedSlide] = useState(0);
@@ -739,9 +744,88 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           </Button>
         </header>
 
-        {/* Task 5: FILMSTRIP */}
-        <aside style={{ gridArea: "filmstrip" }} className="bg-bg-surface border-r border-border-subtle overflow-y-auto">
-          <span className="text-caption text-text-tertiary p-4 block">Filmstrip — Task 5</span>
+        {/* ── FILMSTRIP ── */}
+        <aside
+          style={{ gridArea: "filmstrip" }}
+          className="bg-bg-surface border-r border-border-subtle flex flex-col overflow-hidden"
+        >
+          {/* Header fixo */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border-subtle shrink-0">
+            <span className="text-micro text-text-tertiary">SLIDES</span>
+            <span className="text-caption text-text-tertiary tnum">{draft.slides.length}</span>
+          </div>
+
+          {/* Lista de thumbnails scrollável */}
+          <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+            {draft.slides.map((s, i) => {
+              const isActive = selectedSlide === i;
+              const isGenerating = generatingSlide === i;
+
+              return (
+                <button
+                  key={s.id ?? i}
+                  type="button"
+                  onClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
+                  className={cn(
+                    "relative w-full rounded-md overflow-hidden border transition-colors duration-fast cursor-pointer group shrink-0",
+                    isActive
+                      ? "border-2 border-accent"
+                      : "border border-border-subtle hover:border-border-default"
+                  )}
+                  style={{ height: FILMSTRIP_THUMB_H }}
+                  aria-label={`Slide ${i + 1}`}
+                  aria-pressed={isActive}
+                >
+                  {/* Thumbnail do slide em escala */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      width: CANVAS_W,
+                      height: CANVAS_H,
+                      transform: `scale(${FILMSTRIP_SCALE})`,
+                      transformOrigin: "top left",
+                    }}
+                  >
+                    <SlidePreview
+                      slide={{ ...s, ...(externallyGeneratedImages[i] ? { bgImageUrl: externallyGeneratedImages[i] } : {}) }}
+                      carousel={draft}
+                    />
+                  </div>
+
+                  {/* Número do slide */}
+                  <div className="absolute bottom-1 right-1 px-1 py-0.5 rounded-xs bg-bg-overlay text-micro text-text-secondary tnum pointer-events-none">
+                    {i + 1}
+                  </div>
+
+                  {/* Overlay de geração em progresso */}
+                  {isGenerating && (
+                    <div className="absolute inset-0 bg-bg-overlay flex flex-col items-center justify-center gap-1 pointer-events-none">
+                      <Sparkles size={16} className="text-accent animate-pulse" strokeWidth={1.5} />
+                      <span className="text-micro text-accent tnum">{generatingProgress}%</span>
+                    </div>
+                  )}
+
+                  {/* Reloading de imagem individual */}
+                  {regenLoading && regenLoading.startsWith(`${i}-`) && !isGenerating && (
+                    <div className="absolute inset-0 bg-bg-overlay flex items-center justify-center pointer-events-none">
+                      <Sparkles size={14} className="text-accent animate-spin" strokeWidth={1.5} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Botão adicionar slide */}
+            <button
+              type="button"
+              onClick={() => setShowAddSlide(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-md border border-dashed border-border-default text-caption text-text-tertiary hover:border-accent hover:text-accent transition-colors duration-fast shrink-0"
+              style={{ height: 44 }}
+            >
+              <span className="text-base leading-none">+</span>
+              Adicionar slide
+            </button>
+          </div>
         </aside>
 
         {/* Task 6: CANVAS */}
