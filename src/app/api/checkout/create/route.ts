@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getSessionUser } from "@/lib/auth";
 import User from "@/models/User";
 import { getAppConfig } from "@/models/AppConfig";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    let planType: "pro" | "studio" = "pro";
+    try {
+      const body = await req.json();
+      if (body.planType === "studio") planType = "studio";
+    } catch { /* no body = default pro */ }
+
     const session = await getSessionUser();
     if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
@@ -18,8 +24,8 @@ export async function POST() {
 
     if (!user) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
 
-    if (user.plan === "pro") {
-      return NextResponse.json({ error: "Você já tem o plano Pro." }, { status: 400 });
+    if (user.plan === planType) {
+      return NextResponse.json({ error: `Você já tem o plano ${planType === "studio" ? "Studio" : "Pro"}.` }, { status: 400 });
     }
 
     if (!cfg.mpEnabled || !cfg.mpAccessToken) {
@@ -31,11 +37,15 @@ export async function POST() {
     const preference = {
       items: [
         {
-          id: "novacraft-pro",
-          title: "NovaCraft Pro — Plano Mensal",
-          description: "Carrosséis ilimitados, imagens com IA, suporte prioritário",
+          id: `novacraft-${planType}`,
+          title: planType === "studio"
+            ? "NovaCraft Studio — Plano Mensal"
+            : "NovaCraft Pro — Plano Mensal",
+          description: planType === "studio"
+            ? "Carrosséis ilimitados, Notícia PRO, imagens com IA, suporte prioritário"
+            : "100 carrosséis/mês, imagens com IA, suporte prioritário",
           quantity: 1,
-          unit_price: cfg.mpProPriceReais,
+          unit_price: planType === "studio" ? cfg.mpStudioPriceReais : cfg.mpProPriceReais,
           currency_id: "BRL",
         },
       ],
@@ -51,6 +61,7 @@ export async function POST() {
       auto_return: "approved",
       notification_url: `${baseUrl}/api/webhooks/mercadopago`,
       external_reference: session.userId,
+      metadata: { planType },
       statement_descriptor: "NOVACRAFT",
     };
 
