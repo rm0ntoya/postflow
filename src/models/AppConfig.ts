@@ -12,6 +12,8 @@ export interface IAppConfig extends Document {
   mpWebhookSecret: string;
   mpEnabled: boolean;
   mpProPriceReais: number;
+  mpStudioPriceReais: number;
+  trialDays: number;
   // reCAPTCHA
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
@@ -29,6 +31,8 @@ const AppConfigSchema = new Schema<IAppConfig>({
   mpWebhookSecret: { type: String, default: "" },
   mpEnabled: { type: Boolean, default: false },
   mpProPriceReais: { type: Number, default: 97 },
+  mpStudioPriceReais: { type: Number, default: 149 },
+  trialDays: { type: Number, default: 7 },
   recaptchaSiteKey: { type: String, default: "" },
   recaptchaSecretKey: { type: String, default: "" },
   recaptchaEnabled: { type: Boolean, default: false },
