@@ -41,7 +41,7 @@ export interface IUser extends Document {
   plan: "free" | "pro" | "studio";
   carouselsThisMonth: number;
   usageResetAt: Date;
-  mpPaymentId?: string;
+  stripePaymentId?: string;
   planExpiresAt?: Date;
   trialEndsAt?: Date;
   createdAt: Date;
@@ -76,7 +76,7 @@ const UserSchema = new Schema<IUser>(
     plan: { type: String, enum: ["free", "pro", "studio"], default: "free" },
     carouselsThisMonth: { type: Number, default: 0 },
     usageResetAt: { type: Date, default: () => new Date() },
-    mpPaymentId: { type: String },
+    stripePaymentId: { type: String },
     planExpiresAt: { type: Date },
     trialEndsAt: { type: Date },
   },
