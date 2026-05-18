@@ -10,10 +10,10 @@ export async function GET() {
     return NextResponse.json({
       recaptchaEnabled: cfg.recaptchaEnabled,
       recaptchaSiteKey: cfg.recaptchaEnabled ? cfg.recaptchaSiteKey : "",
-      mpEnabled: cfg.mpEnabled,
-      mpPublicKey: cfg.mpEnabled ? cfg.mpPublicKey : "",
+      stripeEnabled: !!(cfg.stripeSecretKey && cfg.stripePublishableKey),
+      stripePublishableKey: cfg.stripePublishableKey || "",
     });
   } catch {
-    return NextResponse.json({ recaptchaEnabled: false, mpEnabled: false });
+    return NextResponse.json({ recaptchaEnabled: false, stripeEnabled: false });
   }
 }
