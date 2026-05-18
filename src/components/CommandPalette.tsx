@@ -16,6 +16,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const cmds: Cmd[] = React.useMemo(() => [
     { id: "new",      group: "Comandos", label: "Novo carrossel",   shortcut: "c",   run: () => window.dispatchEvent(new CustomEvent("nc:open-create")) },
     { id: "news",     group: "Páginas",  label: "Modo Notícia",     shortcut: "g n", run: () => router.push("/dashboard/news") },
+    { id: "newsPro",  group: "Páginas",  label: "Notícia PRO",      shortcut: "g p", run: () => router.push("/dashboard/news-pro") },
     { id: "home",     group: "Páginas",  label: "Dashboard",        shortcut: "g d", run: () => router.push("/dashboard") },
     { id: "calendar", group: "Páginas",  label: "Calendário",       shortcut: "g c", run: () => router.push("/dashboard/calendar") },
     { id: "context",  group: "Páginas",  label: "Contexto",         shortcut: "g x", run: () => router.push("/dashboard/context") },

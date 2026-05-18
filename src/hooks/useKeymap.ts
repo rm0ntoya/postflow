@@ -10,6 +10,7 @@ export function useKeymap() {
     const map: Record<string, string> = {
       "g d": "/dashboard",
       "g n": "/dashboard/news",
+      "g p": "/dashboard/news-pro",
       "g c": "/dashboard/calendar",
       "g x": "/dashboard/context",
       "g s": "/dashboard/settings",
