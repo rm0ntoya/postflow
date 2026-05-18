@@ -13,7 +13,8 @@ async function getStats() {
 
   const [
     totalUsers, totalCarousels, newUsersToday, newUsersWeek,
-    usersWithKey, bannedUsers, adminCount, carouselsToday, config,
+    usersWithKey, bannedUsers, adminCount, carouselsToday,
+    proUsers, studioUsers, trialUsers, config,
   ] = await Promise.all([
     User.countDocuments(),
     Carousel.countDocuments(),
@@ -23,10 +24,16 @@ async function getStats() {
     User.countDocuments({ isBanned: true }),
     User.countDocuments({ isAdmin: true }),
     Carousel.countDocuments({ createdAt: { $gte: todayStart } }),
+    User.countDocuments({ plan: "pro", planExpiresAt: { $gt: now } }),
+    User.countDocuments({ plan: "studio", planExpiresAt: { $gt: now } }),
+    User.countDocuments({ trialEndsAt: { $gt: now }, plan: "free" }),
     getAppConfig(),
   ]);
 
-  return { totalUsers, totalCarousels, newUsersToday, newUsersWeek, usersWithKey, bannedUsers, adminCount, carouselsToday, maintenanceMode: config.maintenanceMode };
+  const mrrEstimated = (proUsers * (config.mpProPriceReais ?? 49)) + (studioUsers * (config.mpStudioPriceReais ?? 149));
+  const conversionRate = totalUsers > 0 ? Math.round(((proUsers + studioUsers) / totalUsers) * 100) : 0;
+
+  return { totalUsers, totalCarousels, newUsersToday, newUsersWeek, usersWithKey, bannedUsers, adminCount, carouselsToday, proUsers, studioUsers, trialUsers, mrrEstimated, conversionRate, maintenanceMode: config.maintenanceMode };
 }
 
 export default async function AdminPage() {
@@ -57,8 +64,12 @@ export default async function AdminPage() {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(190px,1fr))", gap: 14, marginBottom: 36 }}>
+        <StatCard label="MRR Estimado" value={`R$ ${stats.mrrEstimated.toLocaleString("pt-BR")}`} sub={`Pro × ${stats.proUsers} + Studio × ${stats.studioUsers}`} accent="#f59e0b" />
+        <StatCard label="Conversão" value={`${stats.conversionRate}%`} sub="usuários pagantes" accent="#22c55e" />
         <StatCard label="Total de Usuários" value={stats.totalUsers} sub={`+${stats.newUsersToday} hoje`} />
-        <StatCard label="Novos esta Semana" value={stats.newUsersWeek} accent="#22c55e" />
+        <StatCard label="Pro Ativos" value={stats.proUsers} accent="#8b5cf6" />
+        <StatCard label="Studio Ativos" value={stats.studioUsers} accent="#f59e0b" />
+        <StatCard label="Em Trial" value={stats.trialUsers} accent="#3b82f6" />
         <StatCard label="Total de Carrosséis" value={stats.totalCarousels} sub={`+${stats.carouselsToday} hoje`} accent="#3b82f6" />
         <StatCard label="API Keys Ativas" value={stats.usersWithKey} accent="#f97316" />
         <StatCard label="Usuários Banidos" value={stats.bannedUsers} accent="#ef4444" />
