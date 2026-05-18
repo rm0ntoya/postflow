@@ -24,7 +24,7 @@
     "jose": "^5.9.3",
     "jszip": "^3.10.1",
     "lucide-react": "^1.14.0",
-    "mongoose": "^8.3.4",
+    "mongoose": "^8.24.0",
     "next": "^14.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
