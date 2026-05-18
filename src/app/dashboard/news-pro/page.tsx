@@ -673,6 +673,7 @@ function Step3({ article }: { article: Article }) {
 
 export default function NewsProPage() {
   const router = useRouter();
+  const [planAllowed, setPlanAllowed] = React.useState<boolean | null>(null);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [selectedArticle, setSelectedArticle] = React.useState<Article | null>(null);
   const [toast, setToast] = React.useState("");
@@ -689,6 +690,13 @@ export default function NewsProPage() {
   const [selectedImages, setSelectedImages] = React.useState<string[]>([]);
   const [articleContent, setArticleContent] = React.useState("");
   const [loadingImages, setLoadingImages] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/user/plan-check")
+      .then(r => r.json())
+      .then(d => setPlanAllowed(d.hasNewsPro))
+      .catch(() => setPlanAllowed(false));
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -796,6 +804,34 @@ export default function NewsProPage() {
       setGenerating(false);
     }
   }, [selectedArticle, config, articleContent, selectedImages, router]);
+
+  if (planAllowed === null) {
+    return (
+      <div className="bg-bg-base min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (planAllowed === false) {
+    return (
+      <div className="bg-bg-base min-h-screen flex items-center justify-center px-8">
+        <div className="text-center max-w-md">
+          <div className="text-5xl mb-6">🔒</div>
+          <h2 className="text-2xl font-bold text-text-primary mb-3">Notícia PRO</h2>
+          <p className="text-text-secondary mb-6">
+            Acesso ao feed de notícias com seleção de imagens é exclusivo do plano Studio.
+          </p>
+          <a
+            href="/dashboard/upgrade"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:opacity-90 text-white font-medium rounded-xl transition-opacity"
+          >
+            Ver planos → Studio
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-bg-base min-h-screen">
