@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { redirect } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
-export const metadata = { title: "Admin — NovaCraft" };
+export const metadata = { title: "Admin — Carrossel AI" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await connectDB();

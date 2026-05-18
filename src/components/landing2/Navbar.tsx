@@ -27,7 +27,7 @@ export const Navbar = () => {
         {/* Logo Símbolo */}
         <div className="w-5 h-5 bg-accent rounded-[4px] flex-shrink-0" />
         <span className="text-body-strong tracking-tight text-text-primary">
-          NovaCraft
+          Carrossel AI
         </span>
       </div>
 

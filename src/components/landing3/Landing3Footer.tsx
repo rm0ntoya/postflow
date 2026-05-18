@@ -29,7 +29,7 @@ export function Landing3Footer() {
         </Link>
       </div>
       <div className="landing3-container border-t border-border-subtle py-4 text-caption text-text-tertiary">
-        © 2026 NovaCraft. Todos os direitos reservados.
+        © 2026 Carrossel AI. Todos os direitos reservados.
       </div>
     </footer>
   );

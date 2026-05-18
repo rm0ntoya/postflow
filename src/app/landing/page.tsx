@@ -133,7 +133,7 @@ function AuthModal({ tab: initTab, onClose }: { tab: "login" | "register"; onClo
       <div className="glass" style={{ width: "100%", maxWidth: 420, padding: "40px 36px", borderRadius: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
           <div className="navbar-logo-mark">✦</div>
-          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>NovaCraft AI</span>
+          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>Carrossel AI AI</span>
           <button onClick={onClose} style={{ marginLeft: "auto", width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(255,255,255,.1)", background: "rgba(255,255,255,.04)", color: "rgba(255,255,255,.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✕</button>
         </div>
 
@@ -239,7 +239,7 @@ export default function LandingNewPage() {
           <div className="navbar-inner">
             <a href="#" className="navbar-logo">
               <div className="navbar-logo-mark">✦</div>
-              NovaCraft AI
+              Carrossel AI AI
             </a>
             <ul className="navbar-links">
               <li><a href="#recursos">Recursos</a></li>
@@ -345,7 +345,7 @@ export default function LandingNewPage() {
         <div className="container">
           <div className="stats-grid reveal">
             {[
-              { n: "28k+", label: "criadores ativos", desc: "Gerando conteúdo todo dia com NovaCraft" },
+              { n: "28k+", label: "criadores ativos", desc: "Gerando conteúdo todo dia com Carrossel AI" },
               { n: "4,2M+", label: "posts gerados", desc: "Desde o lançamento da plataforma" },
               { n: "3.4×", label: "mais engajamento", desc: "Em média vs. posts criados manualmente" },
               { n: "4.9★", label: "avaliação", desc: "Média de avaliações dos usuários ativos" },
@@ -394,7 +394,7 @@ export default function LandingNewPage() {
               <div style={{ marginTop: 32 }}>
                 <div className="editorial-tag" style={{ background: "rgba(168,85,247,.08)", border: "1px solid rgba(168,85,247,.25)", color: "#C4B5FD" }}>A SOLUÇÃO</div>
                 <p className="body" style={{ marginTop: 12 }}>
-                  NovaCraft AI resolve cada um desses problemas — em menos de 60 segundos por carrossel. Com paletas, planejador editorial e modo debate.
+                  Carrossel AI AI resolve cada um desses problemas — em menos de 60 segundos por carrossel. Com paletas, planejador editorial e modo debate.
                 </p>
               </div>
             </div>
@@ -618,7 +618,7 @@ export default function LandingNewPage() {
             <div>
               <div className="footer-logo">
                 <div className="footer-logo-mark">✦</div>
-                <span className="footer-logo-name">NovaCraft AI</span>
+                <span className="footer-logo-name">Carrossel AI AI</span>
               </div>
               <p className="footer-desc">A plataforma que transforma qualquer criador em uma máquina de conteúdo viral para Instagram — com IA generativa, paletas de cores e planejador editorial.</p>
             </div>
@@ -637,7 +637,7 @@ export default function LandingNewPage() {
           </div>
           <div className="divider" />
           <div className="footer-bottom" style={{ marginTop: 28 }}>
-            <span className="footer-copy">© 2026 NovaCraft AI. Todos os direitos reservados.</span>
+            <span className="footer-copy">© 2026 Carrossel AI AI. Todos os direitos reservados.</span>
             <div className="footer-legal">
               {["Privacidade", "Termos de uso", "Cookies"].map((l) => <a key={l} href="#">{l}</a>)}
             </div>

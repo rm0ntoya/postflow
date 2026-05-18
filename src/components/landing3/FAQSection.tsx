@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 const faqs = [
   {
     q: "Preciso saber design?",
-    a: "Não. O NovaCraft organiza a estrutura, sugere a copy e entrega um carrossel editável. Você entra para ajustar direção, tom e detalhes finais.",
+    a: "Não. O Carrossel AI organiza a estrutura, sugere a copy e entrega um carrossel editável. Você entra para ajustar direção, tom e detalhes finais.",
   },
   {
     q: "O que é o Modo Notícia?",

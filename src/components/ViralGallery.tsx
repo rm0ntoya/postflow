@@ -120,7 +120,7 @@ export default function ViralGallery({ title = "Imagens geradas com", subtitle =
           fontSize: 15, fontWeight: 300, color: "rgba(255,255,255,.45)",
           marginTop: 12, lineHeight: 1.7,
         }}>
-          Cada imagem foi gerada pelo Gemini AI a partir dos prompts criados pela NovaCraft — prontas para publicar no Instagram.
+          Cada imagem foi gerada pelo Gemini AI a partir dos prompts criados pela Carrossel AI — prontas para publicar no Instagram.
         </p>
       </div>
 

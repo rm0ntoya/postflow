@@ -10,7 +10,7 @@ const steps = [
   {
     label: "02",
     title: "A IA estrutura narrativa e slides",
-    copy: "O NovaCraft separa gancho, desenvolvimento, prova e CTA em um carrossel editável.",
+    copy: "O Carrossel AI separa gancho, desenvolvimento, prova e CTA em um carrossel editável.",
     icon: Sparkles,
   },
   {

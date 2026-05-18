@@ -45,7 +45,7 @@ export function LogoWordmark({ className }: { className?: string }) {
       className={cn(className)}
       style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "-0.04em", fontSize: 18 }}
     >
-      NovaCraft
+      Carrossel AI
     </span>
   );
 }

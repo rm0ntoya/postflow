@@ -103,7 +103,7 @@ export default function CeoSection({ onCta, ctaLabel = "Quero Parar de Perder Te
               {[
                 "O CEO do Instagram confirmou: o algoritmo prioriza carrosséis para maximizar o alcance orgânico. Quem não publica esse formato está deixando seguidores na mesa.",
                 "Pesquisas apontam que posts com 3+ frames no Carrossel recebem, em média, 19% mais impressões do que posts únicos — e a taxa de retenção chega a ser 3× maior.",
-                "A diferença entre quem cresce no Instagram e quem fica parado é exatamente isso: consistência no formato certo. A NovaCraft é a ferramenta que torna isso possível.",
+                "A diferença entre quem cresce no Instagram e quem fica parado é exatamente isso: consistência no formato certo. A Carrossel AI é a ferramenta que torna isso possível.",
               ].map((text, i) => (
                 <p key={i} style={{
                   fontFamily: "'Space Grotesk', system-ui, sans-serif",

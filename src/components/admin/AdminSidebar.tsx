@@ -22,7 +22,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
         <div style={{ padding: "0 20px 24px", borderBottom: "1px solid #1e1e1e", marginBottom: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#555", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Painel Admin</div>
           <div style={{ fontSize: 20, fontWeight: 800, background: "linear-gradient(90deg,#a855f7,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            NovaCraft
+            Carrossel AI
           </div>
         </div>
         <nav style={{ flex: 1, paddingTop: 4 }}>

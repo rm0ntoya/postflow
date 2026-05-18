@@ -61,7 +61,7 @@ function HeroEditorial() {
             <span>↓</span>
             <span>↓</span>
           </div>
-          <div>[ CARROSSEL NOVACRAFT ]</div>
+          <div>[ CARROSSEL CARROSSEL AI ]</div>
           <div className="text-text-primary font-semibold">GENTE!! Saiu agora a</div>
           <div className="text-text-primary font-semibold">nova lei que muda TUDO</div>
         </div>

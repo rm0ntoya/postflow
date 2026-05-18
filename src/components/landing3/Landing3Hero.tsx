@@ -8,7 +8,7 @@ export function Landing3Hero() {
       <div className="landing3-reveal">
         <div className="mb-5 inline-flex items-center gap-2 rounded-pill border border-border-subtle bg-bg-surface px-3 py-1 text-micro text-text-secondary">
           <span className="h-1.5 w-1.5 rounded-pill bg-accent" />
-          NOVACRAFT PARA CRIADORES
+          CARROSSEL AI PARA CRIADORES
         </div>
 
         <h1 className="landing3-display max-w-4xl text-text-primary">

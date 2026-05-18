@@ -244,7 +244,7 @@ function UpgradePageContent() {
       <div className="pt-12 pb-16 px-4">
         <div className="max-w-[1040px] mx-auto text-center">
           <div className="text-micro text-text-secondary uppercase tracking-wider mb-4">
-            PLANOS NOVACRAFT
+            PLANOS CARROSSEL AI
           </div>
           <h1 className="text-display text-text-primary mb-4">
             Pague pelo que usa. Cresça quando precisar.

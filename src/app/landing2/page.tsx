@@ -64,9 +64,9 @@ export default function Landing2Page() {
       <footer className="py-12 border-t border-border-subtle text-center">
         <div className="flex items-center justify-center gap-2 mb-6">
           <div className="w-4 h-4 bg-accent rounded-sm" />
-          <span className="text-small font-bold text-text-primary">NovaCraft</span>
+          <span className="text-small font-bold text-text-primary">Carrossel AI</span>
         </div>
-        <p className="text-micro text-text-tertiary">© 2026 NOVACRAFT. TODOS OS DIREITOS RESERVADOS.</p>
+        <p className="text-micro text-text-tertiary">© 2026 CARROSSEL AI. TODOS OS DIREITOS RESERVADOS.</p>
       </footer>
     </main>
   );

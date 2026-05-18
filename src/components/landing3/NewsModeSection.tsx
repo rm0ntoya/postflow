@@ -62,7 +62,7 @@ export function NewsModeSection() {
             <div className="p-5">
               <div className="mb-4 flex items-center gap-2 text-micro text-accent">
                 <ArrowDown size={14} strokeWidth={1.5} />
-                CARROSSEL NOVACRAFT
+                CARROSSEL CARROSSEL AI
               </div>
               <div className="space-y-3">
                 {[

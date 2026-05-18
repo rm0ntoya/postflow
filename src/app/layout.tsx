@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "NovaCraft — Carrosséis em segundos",
+  title: "Carrossel AI — Carrosséis em segundos",
   description: "Crie carrosséis profissionais com IA. Modo Notícia transforma qualquer matéria em post viral.",
   themeColor: "#0A0A0B",
 };

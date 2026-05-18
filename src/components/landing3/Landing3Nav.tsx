@@ -13,7 +13,7 @@ export function Landing3Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-border-subtle bg-bg-base">
       <nav className="landing3-container flex h-14 items-center gap-4">
-        <Link href="/landing3" aria-label="NovaCraft landing" className="shrink-0">
+        <Link href="/landing3" aria-label="Carrossel AI landing" className="shrink-0">
           <LogoLockup />
         </Link>
 

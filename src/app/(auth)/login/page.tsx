@@ -72,7 +72,7 @@ export default function LoginPage() {
                 Bem-vindo de volta.
               </h1>
               <p className="text-body text-text-secondary">
-                Entre na sua conta NovaCraft.
+                Entre na sua conta Carrossel AI.
               </p>
             </div>
           </div>

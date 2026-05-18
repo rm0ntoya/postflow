@@ -16,7 +16,7 @@ async function fetchArticleContent(url: string) {
   const { data } = await axios.get(url, {
     timeout: 10000,
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; NovaCraftBot/1.0)",
+      "User-Agent": "Mozilla/5.0 (compatible; Carrossel AIBot/1.0)",
       Accept: "text/html,application/xhtml+xml",
       "Accept-Language": "pt-BR,pt;q=0.9",
     },
