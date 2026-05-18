@@ -28,7 +28,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
   }
 
-  await connectDB();
+  try {
+    await connectDB();
+  } catch (dbErr) {
+    console.error("[webhook/stripe] Database connection failed");
+    return NextResponse.json({ error: "Database error" }, { status: 503 });
+  }
 
   try {
     if (event.type === "checkout.session.completed") {
@@ -57,28 +62,25 @@ export async function POST(req: NextRequest) {
           },
           { new: true }
         );
+
+        // Record payment
+        await Payment.findOneAndUpdate(
+          { stripePaymentId: session.payment_intent },
+          {
+            userId,
+            stripePaymentId: session.payment_intent,
+            planType,
+            amountBRL: session.amount_total ? Math.round(session.amount_total / 100) : 0,
+            status: "approved",
+            createdAt: new Date(session.created * 1000),
+          },
+          { upsert: true }
+        );
+
+        console.log(`[webhook/stripe] Payment approved for user ${userId}, plan ${planType}`);
       } else {
-        // No payment intent - don't save incomplete payment
-        console.warn("[webhook/stripe] No payment_intent in session", { userId, planType });
+        console.warn("[webhook/stripe] No payment_intent, skipping payment record", { userId, planType });
       }
-
-      // Record payment
-      await Payment.findOneAndUpdate(
-        { stripePaymentId: session.payment_intent },
-        {
-          userId,
-          stripePaymentId: session.payment_intent,
-          planType,
-          amountBRL: (session.amount_total && session.payment_intent)
-            ? Math.round(session.amount_total / 100)
-            : 0,
-          status: "approved",
-          createdAt: new Date(session.created * 1000),
-        },
-        { upsert: true }
-      );
-
-      console.log(`[webhook/stripe] Payment approved for user ${userId}, plan ${planType}`);
     } else if (event.type === "customer.subscription.deleted") {
       // Handle subscription cancellation
       const subscription = event.data.object as Stripe.Subscription;
@@ -93,8 +95,20 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      await User.findByIdAndUpdate(userId, { plan: "free" }, { new: true });
-      console.log(`[webhook/stripe] User ${userId} downgraded to free plan`);
+      try {
+        const updated = await User.findByIdAndUpdate(userId, { plan: "free" }, { new: true });
+        if (!updated) {
+          console.error("[webhook/stripe] User not found for subscription deletion", { userId });
+        } else {
+          console.log(`[webhook/stripe] User ${userId} downgraded to free plan`);
+        }
+      } catch (updateErr) {
+        console.error("[webhook/stripe] Failed to downgrade user on subscription deletion", {
+          userId,
+          error: updateErr instanceof Error ? updateErr.message : "Unknown error",
+        });
+        // Still return 200 to prevent Stripe retry storm, but log the error
+      }
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
