@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   if (!baseUrl) {
     return NextResponse.json(
-      { error: "Configuração faltando: NEXT_PUBLIC_URL" },
+      { error: "Configuração faltando: NEXT_PUBLIC_BASE_URL" },
       { status: 503 }
     );
   }

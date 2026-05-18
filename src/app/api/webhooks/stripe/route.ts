@@ -62,11 +62,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
 
-      // Update user plan — use Stripe's actual subscription period end when available
-      const sessionAny = session as Record<string, unknown>;
-      const planExpiresAt = typeof sessionAny.current_period_end === "number"
-        ? new Date((sessionAny.current_period_end as number) * 1000)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // Determine plan expiry — current_period_end lives on the Subscription,
+      // not on Checkout.Session. Fetch the subscription when available.
+      let planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      if (session.subscription) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          // current_period_end may not be typed in all SDK versions; access via index
+          const periodEnd = (subscription as unknown as Record<string, unknown>).current_period_end;
+          if (typeof periodEnd === "number" && periodEnd > 0) {
+            planExpiresAt = new Date(periodEnd * 1000);
+          }
+        } catch (err) {
+          console.warn("[webhook/stripe] Could not fetch subscription period, falling back to +30d", { err });
+        }
+      }
 
       if (session.payment_intent) {
         await User.findByIdAndUpdate(
