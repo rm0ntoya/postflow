@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Carousel from "@/models/Carousel";
+import User from "@/models/User";
 import { requireAdmin } from "@/lib/adminAuth";
 
 export async function GET(req: NextRequest) {
@@ -33,7 +34,14 @@ export async function GET(req: NextRequest) {
     ]);
 
     const total = countResult[0]?.total || 0;
-    return NextResponse.json({ carousels, total, page, pages: Math.ceil(total / limit) });
+
+    // Enrich with user info
+    const userIds = [...new Set(carousels.map((c: { userId: unknown }) => String(c.userId)))];
+    const users = await User.find({ _id: { $in: userIds } }).select("name email").lean();
+    const userMap = Object.fromEntries(users.map((u: { _id: unknown; name: string; email: string }) => [String(u._id), u]));
+    const enriched = carousels.map((c: { userId: unknown }) => ({ ...c, user: userMap[String(c.userId)] || null }));
+
+    return NextResponse.json({ carousels: enriched, total, page, pages: Math.ceil(total / limit) });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro interno";
     return NextResponse.json({ error: msg }, { status: 500 });
