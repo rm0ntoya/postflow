@@ -14,7 +14,12 @@ const NOISE_SELECTORS = [
   'noscript', 'iframe', 'figure > figcaption',
 ];
 
-async function fetchArticleContent(url: string): Promise<string> {
+interface ScrapeResult {
+  content: string;
+  images: string[];
+}
+
+async function fetchArticleContent(url: string): Promise<ScrapeResult> {
   const { data } = await axios.get(url, {
     timeout: 10000,
     headers: {
@@ -25,6 +30,29 @@ async function fetchArticleContent(url: string): Promise<string> {
   });
 
   const $ = cheerio.load(data);
+
+  // Extract images BEFORE removing noise (og:image, article body imgs)
+  const images: string[] = [];
+  const seen = new Set<string>();
+
+  // og:image first (highest quality)
+  const ogImg = $('meta[property="og:image"]').attr('content');
+  if (ogImg && ogImg.startsWith('http')) { seen.add(ogImg); images.push(ogImg); }
+
+  // Article body images
+  $('article img, [class*="content"] img, [class*="materia"] img, [class*="corpo"] img, main img').each((_, el) => {
+    const src = $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-lazy-src') || '';
+    const absUrl = src.startsWith('http') ? src : src.startsWith('//') ? `https:${src}` : '';
+    if (absUrl && !seen.has(absUrl) && !absUrl.includes('logo') && !absUrl.includes('icon') && !absUrl.includes('avatar')) {
+      // Filter out tiny images (likely icons) — only accept if no dimension hints suggest tiny
+      const w = parseInt($(el).attr('width') || '0');
+      const h = parseInt($(el).attr('height') || '0');
+      if ((w === 0 || w >= 300) && (h === 0 || h >= 200)) {
+        seen.add(absUrl);
+        images.push(absUrl);
+      }
+    }
+  });
 
   // Remove noise elements
   NOISE_SELECTORS.forEach(sel => $(sel).remove());
@@ -38,7 +66,7 @@ async function fetchArticleContent(url: string): Promise<string> {
     }
   });
 
-  return paragraphs.join('\n\n');
+  return { content: paragraphs.join('\n\n'), images: images.slice(0, 12) };
 }
 
 // GET /api/news/:id/content
@@ -62,9 +90,19 @@ router.get('/:id/content', async (req: Request, res: Response) => {
     });
   }
 
+  // Always include article's own image as first candidate
+  const articleImages: string[] = [];
+  if (article.image_url) articleImages.push(article.image_url);
+
   // Try full scrape
   try {
-    const content = await fetchArticleContent(article.url);
+    const { content, images } = await fetchArticleContent(article.url);
+
+    // Merge: article thumbnail first, then scraped images (deduped)
+    const merged = [...articleImages];
+    for (const img of images) {
+      if (!merged.includes(img)) merged.push(img);
+    }
 
     if (content.length >= 100) {
       return res.json({
@@ -72,6 +110,7 @@ router.get('/:id/content', async (req: Request, res: Response) => {
         data: {
           id,
           content,
+          images: merged,
           partial: false,
         },
       });
@@ -84,6 +123,7 @@ router.get('/:id/content', async (req: Request, res: Response) => {
       data: {
         id,
         content: fallback,
+        images: merged,
         partial: true,
       },
     });
@@ -96,6 +136,7 @@ router.get('/:id/content', async (req: Request, res: Response) => {
         data: {
           id,
           content: fallback,
+          images: articleImages,
           partial: true,
         },
       });

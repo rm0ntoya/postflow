@@ -90,11 +90,16 @@ async function fetchCategories(): Promise<{ category: string; count: number }[]>
   return data.data || [];
 }
 
-async function fetchArticleContent(id: string): Promise<Article> {
-  const res = await fetch(`${NEWS_API_BASE}/api/news/${id}`);
-  if (!res.ok) throw new Error("Falha ao buscar conteúdo da matéria");
+async function fetchArticleContent(id: string): Promise<{ content: string; images: string[]; partial: boolean }> {
+  const res = await fetch(`/api/news-content/${id}`);
+  if (!res.ok) throw new Error("Falha ao buscar conteúdo");
   const data = await res.json();
-  return data.data;
+  if (!data.success) throw new Error(data.error?.message || "Erro ao buscar conteúdo");
+  return {
+    content: data.data.content || "",
+    images: Array.isArray(data.data.images) ? data.data.images : [],
+    partial: !!data.data.partial,
+  };
 }
 
 // ───────────────────────────────────────────────────────────────────────
@@ -392,6 +397,10 @@ function Step2({
   onBack,
   onGenerate,
   generating,
+  articleImages,
+  selectedImages,
+  onToggleImage,
+  loadingImages,
 }: {
   article: Article;
   config: CarouselConfig;
@@ -399,6 +408,10 @@ function Step2({
   onBack: () => void;
   onGenerate: () => void;
   generating: boolean;
+  articleImages: string[];
+  selectedImages: string[];
+  onToggleImage: (url: string) => void;
+  loadingImages: boolean;
 }) {
   const toggleImageSlide = (n: number) => {
     setConfig((prev) => {
@@ -473,6 +486,55 @@ function Step2({
         />
         <p className="text-caption text-text-tertiary">
           Direcione a IA para enfatizar um ângulo específico da matéria.
+        </p>
+      </div>
+
+      {/* Article images picker */}
+      <div className="space-y-3">
+        <label className="text-body-strong text-text-primary">
+          Imagens da matéria{" "}
+          <span className="text-text-tertiary font-normal">
+            ({selectedImages.length} de {articleImages.length} selecionadas)
+          </span>
+        </label>
+        {loadingImages ? (
+          <div className="flex gap-2">
+            {[1,2,3].map(i => (
+              <div key={i} className="w-24 h-24 rounded-lg bg-bg-surface animate-pulse" />
+            ))}
+          </div>
+        ) : articleImages.length === 0 ? (
+          <p className="text-caption text-text-tertiary">Nenhuma imagem encontrada na matéria.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {articleImages.map((url, idx) => {
+              const selected = selectedImages.includes(url);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => onToggleImage(url)}
+                  className={`relative w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${
+                    selected
+                      ? "border-accent shadow-md shadow-accent/20"
+                      : "border-border-subtle opacity-50 hover:opacity-80"
+                  }`}
+                  title={selected ? "Desselecionar" : "Selecionar"}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                  {selected && (
+                    <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                        <span className="text-[10px] text-white font-bold">✓</span>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-caption text-text-tertiary">
+          Imagens selecionadas serão usadas nos slides. IA gera imagens apenas para slides sem foto da matéria.
         </p>
       </div>
 
@@ -622,6 +684,12 @@ export default function NewsProPage() {
     imageSlides: [1, 2, 4, 6, 8],
   });
 
+  // Article images scraped from the news page
+  const [articleImages, setArticleImages] = React.useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = React.useState<string[]>([]);
+  const [articleContent, setArticleContent] = React.useState("");
+  const [loadingImages, setLoadingImages] = React.useState(false);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
@@ -629,7 +697,33 @@ export default function NewsProPage() {
 
   const handleArticleSelect = (article: Article) => {
     setSelectedArticle(article);
+    setArticleImages([]);
+    setSelectedImages([]);
+    setArticleContent("");
+    setLoadingImages(true);
     setStep(2);
+    // Fetch full content + images in background while user sees Step 2
+    fetchArticleContent(article.id)
+      .then(({ content, images, partial }) => {
+        setArticleContent(content);
+        setArticleImages(images);
+        setSelectedImages(images); // select all by default
+        if (partial) showToast("Conteúdo parcial — matéria pode estar incompleta.");
+      })
+      .catch(() => {
+        // Fallback: use article thumbnail if available
+        if (article.image_url) {
+          setArticleImages([article.image_url]);
+          setSelectedImages([article.image_url]);
+        }
+      })
+      .finally(() => setLoadingImages(false));
+  };
+
+  const toggleImage = (url: string) => {
+    setSelectedImages(prev =>
+      prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]
+    );
   };
 
   const handleGenerate = React.useCallback(async () => {
@@ -638,22 +732,12 @@ export default function NewsProPage() {
     setStep(3);
 
     try {
-      // Fetch full content
-      let fullArticle = selectedArticle;
-      try {
-        fullArticle = await fetchArticleContent(selectedArticle.id);
-      } catch {
-        showToast("Conteúdo parcial — usando dados disponíveis.");
-      }
+      // Use pre-fetched content (already loaded in background at article selection)
+      const pasteContent = articleContent || selectedArticle.description || "";
 
-      // Build payload matching /api/carousel/generate expected shape
       const themeStr = config.focusPrompt.trim()
-        ? `${fullArticle.title}\n\nFoco adicional: ${config.focusPrompt.trim()}`
-        : fullArticle.title;
-
-      const pasteContent = [fullArticle.description, fullArticle.content]
-        .filter(Boolean)
-        .join("\n\n");
+        ? `${selectedArticle.title}\n\nFoco adicional: ${config.focusPrompt.trim()}`
+        : selectedArticle.title;
 
       const body = {
         theme: themeStr,
@@ -678,19 +762,40 @@ export default function NewsProPage() {
       }
 
       const data = await res.json();
-      const carouselId = data?.carousel?._id || data?._id;
-      if (carouselId) {
-        router.push(`/dashboard/editor/${carouselId}`);
-      } else {
-        throw new Error("ID do carrossel não retornado pela API.");
+      const carousel = data?.carousel;
+      const carouselId = carousel?._id;
+      if (!carouselId) throw new Error("ID do carrossel não retornado pela API.");
+
+      // Patch image slides with selected article images (skips AI generation for those)
+      if (selectedImages.length > 0 && Array.isArray(carousel.slides)) {
+        const imageSlideIndices: number[] = Array.isArray(carousel.imageSlides)
+          ? carousel.imageSlides
+          : config.imageSlides.map((n: number) => n - 1); // convert 1-based to 0-based
+
+        const updatedSlides = carousel.slides.map((slide: Record<string, unknown>, idx: number) => {
+          const imagePos = imageSlideIndices.indexOf(idx);
+          if (imagePos !== -1 && imagePos < selectedImages.length) {
+            // Assign pre-selected article image — editor won't trigger AI gen for this slide
+            return { ...slide, bgImageUrl: selectedImages[imagePos] };
+          }
+          return slide;
+        });
+
+        await fetch(`/api/carousel/${carouselId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slides: updatedSlides }),
+        });
       }
+
+      router.push(`/dashboard/editor/${carouselId}`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Erro ao gerar carrossel.");
       setStep(2);
     } finally {
       setGenerating(false);
     }
-  }, [selectedArticle, config, router]);
+  }, [selectedArticle, config, articleContent, selectedImages, router]);
 
   return (
     <div className="bg-bg-base min-h-screen">
@@ -766,6 +871,10 @@ export default function NewsProPage() {
                 onBack={() => setStep(1)}
                 onGenerate={handleGenerate}
                 generating={generating}
+                articleImages={articleImages}
+                selectedImages={selectedImages}
+                onToggleImage={toggleImage}
+                loadingImages={loadingImages}
               />
             </motion.div>
           )}
