@@ -53,7 +53,7 @@ interface CarouselConfig {
 // FETCH HELPERS
 // ───────────────────────────────────────────────────────────────────────
 
-const NEWS_API_BASE = process.env.NEXT_PUBLIC_NEWS_API_URL || "http://localhost:3001";
+const NEWS_API_BASE = "";
 
 async function fetchArticles(
   page: number,
