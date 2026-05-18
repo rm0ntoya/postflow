@@ -751,7 +751,7 @@ export default function NewsProPage() {
         tone: "direct",
         detail: "medium",
         viral: true,
-        imageSlides: config.imageSlides,
+        imageSlides: config.imageSlides.map((n: number) => n - 1), // convert 1-based to 0-based
         accentColor: "#FFD700",
         pasteContent: pasteContent || undefined,
       };
@@ -775,8 +775,8 @@ export default function NewsProPage() {
       // Patch image slides with selected article images (skips AI generation for those)
       if (selectedImages.length > 0 && Array.isArray(carousel.slides)) {
         const imageSlideIndices: number[] = Array.isArray(carousel.imageSlides)
-          ? carousel.imageSlides
-          : config.imageSlides.map((n: number) => n - 1); // convert 1-based to 0-based
+          ? carousel.imageSlides // already 0-based (converted before sending)
+          : config.imageSlides.map((n: number) => n - 1);
 
         const updatedSlides = carousel.slides.map((slide: Record<string, unknown>, idx: number) => {
           const imagePos = imageSlideIndices.indexOf(idx);
