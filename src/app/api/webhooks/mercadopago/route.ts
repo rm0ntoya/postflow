@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Payment from "@/models/Payment";
 import { getAppConfig } from "@/models/AppConfig";
 import crypto from "crypto";
 
@@ -58,20 +59,44 @@ export async function POST(req: NextRequest) {
       status: string;
       external_reference: string;
       id: number;
+      transaction_amount: number;
+      metadata?: { planType?: string };
     };
 
     const userId = payment.external_reference;
     if (!userId) return NextResponse.json({ ok: true });
 
     if (payment.status === "approved") {
+      const planType = payment.metadata?.planType === "studio" ? "studio" : "pro";
       const planExpiresAt = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
       await User.findByIdAndUpdate(userId, {
-        plan: "pro",
+        plan: planType,
         mpPaymentId: String(payment.id),
         planExpiresAt,
       });
+      try {
+        await Payment.findOneAndUpdate(
+          { mpPaymentId: String(payment.id) },
+          {
+            userId,
+            mpPaymentId: String(payment.id),
+            planType,
+            amountBRL: payment.transaction_amount ?? (planType === "studio" ? 149 : 49),
+            status: "approved",
+          },
+          { upsert: true, new: true }
+        );
+      } catch (e) {
+        console.error("[webhook/mp] Failed to persist payment:", e);
+      }
     } else if (["cancelled", "refunded", "charged_back"].includes(payment.status)) {
       await User.findByIdAndUpdate(userId, { plan: "free" });
+      try {
+        await Payment.findOneAndUpdate(
+          { mpPaymentId: String(payment.id) },
+          { status: "cancelled" }
+        );
+      } catch {}
     }
 
     return NextResponse.json({ ok: true });
