@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkCarouselLimit, incrementCarouselCount, limitErrorResponse } from "@/lib/planLimits";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
@@ -217,6 +218,12 @@ export async function POST(req: NextRequest) {
   const session = await getSessionUser();
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
+  const limitCheck = await checkCarouselLimit(session.userId);
+  if (!limitCheck.allowed) {
+    const { error, reason } = limitErrorResponse(limitCheck.reason);
+    return NextResponse.json({ error, reason }, { status: 403 });
+  }
+
   let theme: string, slideCount: number, tone: string, detail: string;
   let viral: boolean, imageSlides: number[], faceSlides: number[], accentColor: string;
   let pasteContent: string | undefined, modeDebate: boolean, paletteColors: string[] | undefined;
@@ -311,6 +318,7 @@ export async function POST(req: NextRequest) {
     carousel.slides = canvasSlides;
     carousel.status = "draft";
     await carousel.save();
+    await incrementCarouselCount(session.userId);
 
     return NextResponse.json({
       message: "Carrossel gerado com sucesso! Inicie a geração de imagens para completar.",
