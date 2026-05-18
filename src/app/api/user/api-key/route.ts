@@ -4,7 +4,7 @@ import User from "@/models/User";
 import { getSessionUser } from "@/lib/auth";
 import { encryptApiKey, decryptApiKey } from "@/lib/encryption";
 
-export const TEXT_MODELS = [
+const TEXT_MODELS = [
   { id: "gemini-2.5-flash",          label: "Gemini 2.5 Flash",          tier: "free" },
   { id: "gemini-2.5-flash-lite",     label: "Gemini 2.5 Flash-Lite",     tier: "free" },
   { id: "gemini-2.5-pro",            label: "Gemini 2.5 Pro",            tier: "paid" },
@@ -13,7 +13,7 @@ export const TEXT_MODELS = [
   { id: "gemini-3.1-pro-preview",    label: "Gemini 3.1 Pro (Preview)",  tier: "paid" },
 ] as const;
 
-export const IMAGE_MODELS = [
+const IMAGE_MODELS = [
   { id: "gemini-2.5-flash-image",         label: "Nano Banana (Gemini 2.5 Flash Image)",        tier: "free" },
   { id: "gemini-3.1-flash-image-preview", label: "Nano Banana 2 (Gemini 3.1 Flash Image)",      tier: "paid" },
   { id: "gemini-3-pro-image-preview",     label: "Nano Banana Pro (Gemini 3 Pro Image)",        tier: "paid" },
