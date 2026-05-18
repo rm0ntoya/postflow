@@ -30,7 +30,10 @@ async function getStats() {
     getAppConfig(),
   ]);
 
-  const mrrEstimated = (proUsers * 49) + (studioUsers * 149);  // Prices in BRL (Pro: 49, Studio: 149)
+  // Hardcoded prices in BRL (must match Stripe plan pricing in AppConfig)
+  // Pro plan: R$ 49/month | Studio plan: R$ 149/month
+  // UPDATE THESE when Stripe pricing changes in Stripe Dashboard
+  const mrrEstimated = (proUsers * 49) + (studioUsers * 149);
   const conversionRate = totalUsers > 0 ? Math.round(((proUsers + studioUsers) / totalUsers) * 100) : 0;
 
   return { totalUsers, totalCarousels, newUsersToday, newUsersWeek, usersWithKey, bannedUsers, adminCount, carouselsToday, proUsers, studioUsers, trialUsers, mrrEstimated, conversionRate, maintenanceMode: config.maintenanceMode };

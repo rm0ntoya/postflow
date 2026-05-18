@@ -41,6 +41,7 @@ const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
+    // Pro plan price: R$ 49/month (hardcoded, update if Stripe plan changes)
     monthlyPrice: 49,
     description: "Pra quem posta toda semana.",
     features: [
@@ -57,6 +58,7 @@ const PLANS: Plan[] = [
   {
     id: "studio",
     name: "Studio",
+    // Studio plan price: R$ 149/month (hardcoded, update if Stripe plan changes)
     monthlyPrice: 149,
     description: "Equipe e agências.",
     features: [
