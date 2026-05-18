@@ -1,0 +1,407 @@
+# PROMPT PARA CLAUDE FOR CHROME
+# Objetivo: Criar uma API de scraping de notícias brasileiras para o projeto NovaCraft
+
+---
+
+Você vai construir uma API REST completa de scraping de notícias brasileiras. Essa API será consumida por um SaaS chamado NovaCraft, que transforma notícias em carrosséis para redes sociais. O usuário não vai colar links — ele vai ver uma lista de notícias recentes e clicar para gerar o carrossel automaticamente.
+
+## CONTEXTO DO PROJETO
+
+- Frontend: Next.js 14 (App Router), TypeScript
+- A API será um servidor Node.js separado (não dentro do Next.js)
+- A API precisa rodar em background e atualizar o banco de notícias automaticamente
+- O endpoint será chamado pelo frontend NovaCraft para listar e buscar notícias
+
+---
+
+## PORTAIS A FAZER SCRAPING
+
+Crie scrapers para os seguintes portais brasileiros:
+
+1. **G1** — https://g1.globo.com
+2. **CNN Brasil** — https://www.cnnbrasil.com.br
+3. **Estadão** — https://www.estadao.com.br
+4. **Folha de S.Paulo** — https://www.folha.uol.com.br
+5. **UOL Notícias** — https://noticias.uol.com.br
+6. **R7** — https://noticias.r7.com
+7. **Metrópoles** — https://www.metropoles.com
+
+Para cada portal, extraia as notícias da página principal e das seções mais relevantes (Brasil, Política, Tecnologia, Entretenimento, Esportes).
+
+---
+
+## ESTRUTURA DO PROJETO
+
+```
+news-api/
+├── src/
+│   ├── scrapers/
+│   │   ├── g1.ts
+│   │   ├── cnn.ts
+│   │   ├── estadao.ts
+│   │   ├── folha.ts
+│   │   ├── uol.ts
+│   │   ├── r7.ts
+│   │   ├── metropoles.ts
+│   │   └── index.ts          ← exporta todos os scrapers
+│   ├── db/
+│   │   ├── schema.ts          ← definição do banco SQLite
+│   │   └── queries.ts         ← funções de leitura/escrita
+│   ├── scheduler/
+│   │   └── index.ts           ← cron job de atualização automática
+│   ├── routes/
+│   │   └── news.ts            ← endpoints da API REST
+│   └── server.ts              ← entry point
+├── data/
+│   └── news.db                ← banco SQLite (gerado automaticamente)
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## BANCO DE DADOS
+
+Use **SQLite** com a biblioteca `better-sqlite3`. Crie uma única tabela `articles`:
+
+```sql
+CREATE TABLE IF NOT EXISTS articles (
+  id          TEXT PRIMARY KEY,        -- hash único: md5(url)
+  title       TEXT NOT NULL,           -- título da notícia
+  description TEXT,                    -- subtítulo / lead (pode ser null)
+  content     TEXT,                    -- corpo completo da matéria (pode ser null)
+  url         TEXT NOT NULL UNIQUE,    -- link original
+  image_url   TEXT,                    -- imagem de capa (pode ser null)
+  source      TEXT NOT NULL,           -- nome do portal: "G1", "CNN Brasil", etc.
+  source_logo TEXT,                    -- URL do logo do portal (pode ser null)
+  category    TEXT,                    -- "Política", "Tecnologia", "Entretenimento", etc.
+  published_at TEXT,                   -- data de publicação (ISO 8601) se disponível
+  scraped_at  TEXT NOT NULL,           -- quando foi coletada (ISO 8601)
+  is_active   INTEGER DEFAULT 1        -- 1 = ativa, 0 = removida
+);
+
+CREATE INDEX IF NOT EXISTS idx_source ON articles(source);
+CREATE INDEX IF NOT EXISTS idx_category ON articles(category);
+CREATE INDEX IF NOT EXISTS idx_scraped_at ON articles(scraped_at DESC);
+```
+
+---
+
+## ESTRUTURA DE DADOS DA NOTÍCIA
+
+Cada scraper deve retornar um array de objetos com esta interface TypeScript:
+
+```typescript
+interface RawArticle {
+  title: string;           // OBRIGATÓRIO — título completo
+  description?: string;    // lead/subtítulo (se disponível no portal)
+  content?: string;        // corpo da matéria (parágrafos concatenados, se acessível)
+  url: string;             // OBRIGATÓRIO — link canônico da notícia
+  image_url?: string;      // URL absoluta da imagem de capa
+  source: string;          // OBRIGATÓRIO — nome do portal (ex: "G1")
+  source_logo?: string;    // URL do logo do portal
+  category?: string;       // seção da notícia (ex: "Política", "Tecnologia")
+  published_at?: string;   // data ISO 8601 (ex: "2024-01-15T14:30:00-03:00")
+}
+```
+
+---
+
+## COMO DEVE SER O SCRAPER DE CADA PORTAL
+
+Use `axios` para HTTP e `cheerio` para parsing HTML. Para cada portal:
+
+1. Faça GET na página principal e nas seções relevantes
+2. Extraia todos os links de notícias da página
+3. Para cada link, extraia os metadados (title, description, image) do HTML (meta tags OG são suficientes para a listagem)
+4. Opcionalmente, acesse o corpo completo da matéria se precisar do `content`
+5. Retorne o array de `RawArticle`
+6. NÃO quebre se um campo for null — use valores opcionais
+
+**Dicas por portal:**
+- G1: usar `<meta property="og:...">` e seletores das manchetes `.feed-post-body`
+- CNN Brasil: usar meta OG + seletores `.home-list` e `.post-header`
+- Estadão: respeitar limite de rate — esperar 1s entre requests
+- Folha: usar RSS feed em `https://feeds.folha.uol.com.br/emcimadahora/rss091.xml` + Atom feeds por seção
+- UOL: priorizar RSS feeds disponíveis
+- R7: usar meta OG das páginas de seções
+- Metrópoles: usar seletores `.post-title` e meta OG
+
+**Tratar erros:** Cada scraper deve capturar erros por artigo individualmente (try/catch por notícia) e continuar. Um portal falhando não deve derrubar os outros.
+
+---
+
+## SCHEDULER (ATUALIZAÇÃO AUTOMÁTICA)
+
+Use a biblioteca `node-cron`. Configure os seguintes intervalos:
+
+```typescript
+// A cada 15 minutos — atualiza todos os portais
+cron.schedule('*/15 * * * *', async () => {
+  console.log('[CRON] Iniciando coleta de notícias...');
+  await runAllScrapers();
+});
+
+// A cada 24 horas às 03:00 — limpa notícias com mais de 7 dias
+cron.schedule('0 3 * * *', async () => {
+  console.log('[CRON] Limpando notícias antigas...');
+  await cleanOldArticles(7);
+});
+```
+
+A função `runAllScrapers()` deve:
+1. Executar todos os scrapers em paralelo (`Promise.allSettled`)
+2. Para cada artigo novo (URL não existe no banco), inserir no SQLite
+3. Artigos duplicados (mesmo URL) devem ser ignorados — não atualizar
+4. Logar quantas notícias foram inseridas por portal
+
+---
+
+## ENDPOINTS DA API REST
+
+Use **Express.js**. Todos os endpoints retornam JSON.
+
+### GET /api/news
+
+Lista notícias com paginação e filtros.
+
+**Query params:**
+- `page` (number, default: 1)
+- `limit` (number, default: 20, max: 100)
+- `source` (string) — filtrar por portal (ex: `?source=G1`)
+- `category` (string) — filtrar por categoria (ex: `?category=Política`)
+- `q` (string) — busca textual no título e descrição
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": {
+    "articles": [
+      {
+        "id": "abc123",
+        "title": "Governo anuncia nova medida econômica",
+        "description": "Ministério da Fazenda divulga pacote de ajuste fiscal",
+        "url": "https://g1.globo.com/...",
+        "image_url": "https://...",
+        "source": "G1",
+        "source_logo": "https://...",
+        "category": "Política",
+        "published_at": "2024-01-15T14:30:00-03:00",
+        "scraped_at": "2024-01-15T15:00:00-03:00"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 347,
+      "total_pages": 18
+    }
+  }
+}
+```
+
+---
+
+### GET /api/news/:id
+
+Retorna uma notícia específica com conteúdo completo.
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "abc123",
+    "title": "...",
+    "description": "...",
+    "content": "Parágrafo 1...\n\nParágrafo 2...",
+    "url": "...",
+    "image_url": "...",
+    "source": "G1",
+    "source_logo": "...",
+    "category": "Política",
+    "published_at": "...",
+    "scraped_at": "..."
+  }
+}
+```
+
+---
+
+### GET /api/news/sources
+
+Lista todos os portais disponíveis com contagem de notícias.
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": [
+    { "source": "G1", "count": 142, "last_scraped": "2024-01-15T15:00:00Z" },
+    { "source": "CNN Brasil", "count": 89, "last_scraped": "2024-01-15T14:58:00Z" }
+  ]
+}
+```
+
+---
+
+### GET /api/news/categories
+
+Lista todas as categorias disponíveis com contagem.
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": [
+    { "category": "Política", "count": 98 },
+    { "category": "Tecnologia", "count": 45 },
+    { "category": "Entretenimento", "count": 67 }
+  ]
+}
+```
+
+---
+
+### POST /api/scrape
+
+Dispara scraping manual imediato (útil para testes).
+
+**Body:** `{}` (sem body necessário)
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": {
+    "inserted": 23,
+    "skipped": 145,
+    "errors": 2,
+    "duration_ms": 4200
+  }
+}
+```
+
+---
+
+### GET /api/health
+
+Status da API.
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "articles_total": 347,
+    "last_scrape": "2024-01-15T15:00:00Z",
+    "uptime_seconds": 3600
+  }
+}
+```
+
+---
+
+## CONFIGURAÇÃO DO SERVIDOR
+
+```typescript
+// src/server.ts
+const PORT = process.env.PORT || 3001;
+
+// CORS: permitir requisições do frontend NovaCraft
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://novacraft.app'],
+  methods: ['GET', 'POST'],
+}));
+
+// Rate limiting: 100 req/min por IP
+app.use(rateLimit({ windowMs: 60_000, max: 100 }));
+```
+
+---
+
+## DEPENDÊNCIAS (package.json)
+
+```json
+{
+  "dependencies": {
+    "express": "^4.18.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0",
+    "better-sqlite3": "^9.0.0",
+    "node-cron": "^3.0.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.0.0",
+    "dotenv": "^16.0.0",
+    "xml2js": "^0.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/express": "^4.17.0",
+    "@types/better-sqlite3": "^7.0.0",
+    "@types/node-cron": "^3.0.0",
+    "@types/cheerio": "^0.22.0",
+    "@types/cors": "^2.8.0",
+    "ts-node": "^10.0.0",
+    "tsx": "^4.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  }
+}
+```
+
+---
+
+## COMPORTAMENTO ESPERADO AO INICIAR
+
+Quando o servidor iniciar (`npm run dev`), deve:
+1. Conectar ao SQLite e criar as tabelas se não existirem
+2. Executar o primeiro scraping imediatamente (não esperar 15 min)
+3. Iniciar o servidor Express na porta 3001
+4. Registrar no console quantas notícias foram coletadas
+5. Ativar o cron job de atualização a cada 15 minutos
+
+---
+
+## IMPORTANTE: TRATAMENTO DE ERROS DA API
+
+Todos os erros devem seguir este formato:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Artigo não encontrado"
+  }
+}
+```
+
+Códigos HTTP:
+- 200: sucesso
+- 400: parâmetro inválido
+- 404: recurso não encontrado
+- 429: rate limit excedido
+- 500: erro interno
+
+---
+
+## COMO ESSE PROJETO SERÁ CONSUMIDO
+
+O frontend NovaCraft (Next.js) vai:
+1. Chamar `GET /api/news?limit=20&page=1` para exibir lista de notícias
+2. Mostrar cards com título, imagem, fonte e categoria
+3. Quando o usuário clicar em "Gerar Carrossel", chamar `GET /api/news/:id`
+4. Usar o `title`, `description` e `content` do artigo para gerar os slides automaticamente
+
+O usuário nunca precisará colar uma URL — só clicar na notícia que apareceu na lista.
+
+---
+
+Crie o projeto completo, funcional e pronto para rodar com `npm run dev`. Inclua um README.md com instruções de instalação e uso.
