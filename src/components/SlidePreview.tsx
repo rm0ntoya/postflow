@@ -178,7 +178,7 @@ export default function SlidePreview({ slide, scale = 1, style }: SlidePreviewPr
       {/* Gradient overlay — dark bottom, transparent top */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 1,
-        background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 45%, rgba(0,0,0,0.4) 75%, transparent 100%)",
+        background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.1) 75%, transparent 100%)",
         pointerEvents: "none",
       }}/>
 

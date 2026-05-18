@@ -4,11 +4,13 @@ import Link from "next/link";
 import { MoreHorizontal, Newspaper } from "lucide-react";
 import { Badge, BadgeStatus } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
+import SlidePreview from "@/components/SlidePreview";
 
 export interface CarouselCardData {
   id: string;
   title: string;
   thumbnail?: string;
+  coverSlide?: any | null;
   slideCount: number;
   status: BadgeStatus;
   isNews?: boolean;
@@ -19,8 +21,10 @@ export function CarouselCard({ data }: { data: CarouselCardData }) {
   return (
     <Link href={`/dashboard/editor/${data.id}`} className="group block">
       <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-border-subtle bg-bg-surface-2 transition-all duration-fast group-hover:-translate-y-0.5 group-hover:border-accent">
-        {data.thumbnail
-          ? <img src={data.thumbnail} alt="" className="w-full h-full object-cover" />
+        {data.coverSlide
+          ? <div className="absolute inset-0 overflow-hidden">
+              <SlidePreview slide={data.coverSlide as any} scale={280 / 1080} />
+            </div>
           : <div className="w-full h-full bg-bg-surface-2" />}
         <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 40%)" }} />
         {data.isNews && (

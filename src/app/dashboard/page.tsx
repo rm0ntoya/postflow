@@ -18,7 +18,20 @@ interface RawCarousel {
   title: string;
   theme?: string;
   status: string;
-  slides?: { id: string; bgKey: string; bgImageUrl?: string; bgThumbUrl?: string }[];
+  slides?: {
+    id: string;
+    bgKey?: string;
+    bgOverride?: string;
+    bgImageUrl?: string;
+    bgThumbUrl?: string;
+    elements?: {
+      id: string; type: string; text?: string; segments?: { text: string; color: string }[];
+      x?: number; y?: number; w?: number; h?: number;
+      fontSize?: number; weight?: number; color?: string; font?: string;
+      align?: string; lineHeight?: number; letterSpacing?: number;
+      shape?: string; imageUrl?: string; photoUrl?: string; radius?: number; opacity?: number;
+    }[];
+  }[];
   isNews?: boolean;
   mode?: string;
   updatedAt: string;
@@ -228,11 +241,10 @@ function ListView({ items }: { items: CarouselCardData[] }) {
 function mapCarousel(c: RawCarousel): CarouselCardData {
   const slides = Array.isArray(c.slides) ? c.slides : [];
   const cover = slides[0];
-  const thumbnail = cover?.bgThumbUrl || (cover?.bgImageUrl && cover.bgImageUrl !== "__has_image__" ? cover.bgImageUrl : undefined);
   return {
     id: c._id,
     title: c.title || c.theme || "Sem título",
-    thumbnail,
+    coverSlide: cover ?? null,
     slideCount: slides.length,
     status: mapStatus(c.status),
     isNews: !!(c.isNews || c.mode === "news"),

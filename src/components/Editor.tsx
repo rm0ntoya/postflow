@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Send, Sparkles, MessageCircle, X, ArrowLeft, Undo2, Redo2, MoreHorizontal, Save, ChevronDown } from "lucide-react";
 import Icon from "./Icon";
 import SlidePreview, { resolveBgStyle, CANVAS_W, CANVAS_H } from "./SlidePreview";
@@ -54,6 +55,8 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [toast, setToast] = useState("");
   const [viewMode, setViewMode] = useState<"isolated" | "all">("isolated");
   const [chatOpen, setChatOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const router = useRouter();
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 3000); };
   const stageRef = useRef<HTMLDivElement>(null);
@@ -608,6 +611,17 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     }
   };
 
+  const handleDeleteCarousel = async () => {
+    if (!draft._id) return;
+    if (!confirm("Excluir este carrossel? Esta ação não pode ser desfeita.")) return;
+    const res = await fetch(`/api/carousel/${draft._id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/dashboard");
+    } else {
+      showToast("Erro ao excluir. Tente novamente.");
+    }
+  };
+
   const accentColor = draft.accentColor || "#FFD700";
 
   const slideLabel = (idx: number) =>
@@ -738,10 +752,55 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
             Salvar
           </Button>
 
-          {/* Menu ⋯ */}
-          <Button variant="ghost" size="sm" className="px-2 shrink-0" title="Mais opções">
-            <MoreHorizontal size={15} strokeWidth={1.5} />
+          {/* Toggle view mode */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2 shrink-0 text-caption"
+            title={viewMode === "isolated" ? "Ver todos os slides" : "Ver slide atual"}
+            onClick={() => setViewMode(v => v === "isolated" ? "all" : "isolated")}
+          >
+            {viewMode === "isolated" ? "⊞ Todos" : "⊡ Um"}
           </Button>
+
+          {/* Menu ⋯ */}
+          <div className="relative shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="px-2"
+              title="Mais opções"
+              onClick={() => setMoreMenuOpen(o => !o)}
+            >
+              <MoreHorizontal size={15} strokeWidth={1.5} />
+            </Button>
+            {moreMenuOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 bg-bg-surface border border-border-subtle rounded-lg shadow-xl min-w-[160px] py-1"
+                onMouseLeave={() => setMoreMenuOpen(false)}
+              >
+                <button
+                  onClick={() => { setMoreMenuOpen(false); handleSave(); }}
+                  className="w-full text-left px-4 py-2 text-body text-text-primary hover:bg-bg-surface-2 transition-colors"
+                >
+                  Salvar rascunho
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); window.open(`/api/carousel/${draft._id}`, "_blank"); }}
+                  className="w-full text-left px-4 py-2 text-body text-text-primary hover:bg-bg-surface-2 transition-colors"
+                >
+                  Ver dados JSON
+                </button>
+                <hr className="border-border-subtle my-1" />
+                <button
+                  onClick={() => { setMoreMenuOpen(false); handleDeleteCarousel(); }}
+                  className="w-full text-left px-4 py-2 text-body text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  Excluir carrossel
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         {/* ── FILMSTRIP ── */}
@@ -828,29 +887,47 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           </div>
         </aside>
 
-        {/* CANVAS — shows only the selected slide */}
+        {/* CANVAS */}
         <main
           style={{ gridArea: "canvas" }}
-          className="relative overflow-hidden bg-bg-base flex items-center justify-center"
+          className={`relative bg-bg-base flex ${viewMode === "all" ? "overflow-auto items-start justify-start" : "overflow-hidden items-center justify-center"}`}
           onClick={() => setSelectedEl(null)}
         >
-          {slide && (
-            <SlideCanvas
-              key={slide.id}
-              slide={slide}
-              index={selectedSlide}
-              selected={true}
-              selectedEl={selectedEl}
-              zoom={zoom}
-              isGenerating={generatingSlide === selectedSlide}
-              generatingProgress={generatingProgress}
-              regenLoading={regenLoading === `${selectedSlide}-bg`}
-              onSlideClick={() => setSelectedEl(null)}
-              onElMouseDown={onElMouseDown}
-              onElDblClick={(elId) => setSelectedEl(elId)}
-              onTextChange={(elId, text) => updateEl(selectedSlide, elId, { text })}
-              onRegenBg={() => setRegenTarget({ slideIndex: selectedSlide })}
-            />
+          {viewMode === "isolated" ? (
+            slide && (
+              <SlideCanvas
+                key={slide.id}
+                slide={slide}
+                index={selectedSlide}
+                selected={true}
+                selectedEl={selectedEl}
+                zoom={zoom}
+                isGenerating={generatingSlide === selectedSlide}
+                generatingProgress={generatingProgress}
+                regenLoading={regenLoading === `${selectedSlide}-bg`}
+                onSlideClick={() => setSelectedEl(null)}
+                onElMouseDown={onElMouseDown}
+                onElDblClick={(elId) => setSelectedEl(elId)}
+                onTextChange={(elId, text) => updateEl(selectedSlide, elId, { text })}
+                onRegenBg={() => setRegenTarget({ slideIndex: selectedSlide })}
+              />
+            )
+          ) : (
+            <div className="flex flex-wrap gap-4 p-6 items-start justify-start" onClick={e => e.stopPropagation()}>
+              {draft.slides.map((s, i) => (
+                <div
+                  key={s.id}
+                  onClick={() => { setSelectedSlide(i); setSelectedEl(null); setViewMode("isolated"); }}
+                  className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedSlide === i ? "border-accent" : "border-transparent hover:border-border-strong"}`}
+                  title={`Slide ${i + 1}`}
+                >
+                  <SlidePreview slide={s} scale={0.18} />
+                  <div className="text-center text-caption text-text-tertiary mt-1 pb-1">
+                    {i + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </main>
 
