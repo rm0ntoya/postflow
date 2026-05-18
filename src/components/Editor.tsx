@@ -828,32 +828,30 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           </div>
         </aside>
 
-        {/* CANVAS */}
+        {/* CANVAS — shows only the selected slide */}
         <main
           style={{ gridArea: "canvas" }}
-          className="relative overflow-auto bg-bg-base flex items-center justify-center"
+          className="relative overflow-hidden bg-bg-base flex items-center justify-center"
           onClick={() => setSelectedEl(null)}
         >
-          <div className="flex flex-col gap-8 py-10 px-8 items-center">
-            {draft.slides.map((s, i) => (
-              <SlideCanvas
-                key={s.id}
-                slide={s}
-                index={i}
-                selected={selectedSlide === i}
-                selectedEl={selectedSlide === i ? selectedEl : null}
-                zoom={zoom}
-                isGenerating={generatingSlide === i}
-                generatingProgress={generatingProgress}
-                regenLoading={regenLoading === `${i}-bg`}
-                onSlideClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
-                onElMouseDown={onElMouseDown}
-                onElDblClick={(elId) => { setSelectedSlide(i); setSelectedEl(elId); }}
-                onTextChange={(elId, text) => updateEl(i, elId, { text })}
-                onRegenBg={() => setRegenTarget({ slideIndex: i })}
-              />
-            ))}
-          </div>
+          {slide && (
+            <SlideCanvas
+              key={slide.id}
+              slide={slide}
+              index={selectedSlide}
+              selected={true}
+              selectedEl={selectedEl}
+              zoom={zoom}
+              isGenerating={generatingSlide === selectedSlide}
+              generatingProgress={generatingProgress}
+              regenLoading={regenLoading === `${selectedSlide}-bg`}
+              onSlideClick={() => setSelectedEl(null)}
+              onElMouseDown={onElMouseDown}
+              onElDblClick={(elId) => setSelectedEl(elId)}
+              onTextChange={(elId, text) => updateEl(selectedSlide, elId, { text })}
+              onRegenBg={() => setRegenTarget({ slideIndex: selectedSlide })}
+            />
+          )}
         </main>
 
         {/* INSPECTOR */}
