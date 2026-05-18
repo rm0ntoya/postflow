@@ -1,94 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { connectDB } from "@/lib/mongodb";
+import AppConfig from "@/models/AppConfig";
 import { getSessionUser } from "@/lib/auth";
-import User from "@/models/User";
-import { getAppConfig } from "@/models/AppConfig";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 export async function POST(req: NextRequest) {
+  const session = await getSessionUser();
+  if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  const { planType } = await req.json();
+  if (!planType || !["pro", "studio"].includes(planType)) {
+    return NextResponse.json({ error: "planType inválido" }, { status: 400 });
+  }
+
+  await connectDB();
+  const config = await AppConfig.findOne();
+  if (!config?.stripeSecretKey || !config?.stripePublishableKey) {
+    return NextResponse.json(
+      { error: "Stripe não configurado. Contate o suporte." },
+      { status: 503 }
+    );
+  }
+
+  const priceIdMap: Record<string, string> = {
+    pro: config.stripePriceIdPro,
+    studio: config.stripePriceIdStudio,
+  };
+
+  const priceId = priceIdMap[planType];
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Preço não configurado para plano '${planType}'` },
+      { status: 503 }
+    );
+  }
+
   try {
-    let planType: "pro" | "studio" = "pro";
-    try {
-      const body = await req.json();
-      if (body.planType === "studio") planType = "studio";
-    } catch { /* no body = default pro */ }
-
-    const session = await getSessionUser();
-    if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-
-    await connectDB();
-
-    const [user, cfg] = await Promise.all([
-      User.findById(session.userId).select("email plan name"),
-      getAppConfig(),
-    ]);
-
-    if (!user) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
-
-    if (user.plan === planType) {
-      return NextResponse.json({ error: `Você já tem o plano ${planType === "studio" ? "Studio" : "Pro"}.` }, { status: 400 });
-    }
-
-    if (!cfg.mpEnabled || !cfg.mpAccessToken) {
-      return NextResponse.json({ error: "Pagamentos não configurados ainda." }, { status: 503 });
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
-    const preference = {
-      items: [
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: session.email,
+      line_items: [
         {
-          id: `novacraft-${planType}`,
-          title: planType === "studio"
-            ? "NovaCraft Studio — Plano Mensal"
-            : "NovaCraft Pro — Plano Mensal",
-          description: planType === "studio"
-            ? "Carrosséis ilimitados, Notícia PRO, imagens com IA, suporte prioritário"
-            : "100 carrosséis/mês, imagens com IA, suporte prioritário",
+          price: priceId,
           quantity: 1,
-          unit_price: planType === "studio" ? cfg.mpStudioPriceReais : cfg.mpProPriceReais,
-          currency_id: "BRL",
         },
       ],
-      payer: {
-        name: user.name,
-        email: user.email,
+      metadata: {
+        userId: session.userId,
+        planType,
       },
-      back_urls: {
-        success: `${baseUrl}/api/checkout/success`,
-        failure: `${baseUrl}/dashboard?plan=failed`,
-        pending: `${baseUrl}/dashboard?plan=pending`,
-      },
-      auto_return: "approved",
-      notification_url: `${baseUrl}/api/webhooks/mercadopago`,
-      external_reference: session.userId,
-      metadata: { planType },
-      statement_descriptor: "NOVACRAFT",
-    };
-
-    const mpRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${cfg.mpAccessToken}`,
-      },
-      body: JSON.stringify(preference),
+      success_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/upgrade?status=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/upgrade?status=cancelled`,
     });
 
-    if (!mpRes.ok) {
-      const err = await mpRes.json();
-      console.error("[checkout/create] MP error:", err);
-      return NextResponse.json({ error: "Erro ao criar preferência de pagamento." }, { status: 502 });
-    }
-
-    const data = await mpRes.json();
-
-    return NextResponse.json({
-      checkoutUrl: data.init_point,
-      sandboxUrl: data.sandbox_init_point,
-      preferenceId: data.id,
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Erro interno";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ checkoutUrl: checkoutSession.url }, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    console.error("[checkout/create] Error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
