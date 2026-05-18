@@ -95,15 +95,35 @@ function UpgradePageContent() {
   const [loadingPlan, setLoadingPlan] = useState(true);
 
   useEffect(() => {
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((d) => {
-        setUserPlan(d.plan || "free");
-        setPlanExpiresAt(d.planExpiresAt || null);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingPlan(false));
-  }, []);
+    const isSuccess = searchParams.get("status") === "success";
+    let attempts = 0;
+    const maxAttempts = isSuccess ? 10 : 1;
+    const delay = 2000;
+
+    async function fetchPlan() {
+      try {
+        const r = await fetch("/api/user/profile", { cache: "no-store" });
+        const d = await r.json();
+        const plan = d.plan || "free";
+        const expiry = d.planExpiresAt || null;
+
+        // If came from success and plan still free, retry
+        if (isSuccess && plan === "free" && attempts < maxAttempts) {
+          attempts++;
+          setTimeout(fetchPlan, delay);
+          return;
+        }
+
+        setUserPlan(plan);
+        setPlanExpiresAt(expiry);
+      } catch { /**/ } finally {
+        if (!isSuccess || attempts >= maxAttempts) setLoadingPlan(false);
+        else setLoadingPlan(false);
+      }
+    }
+
+    fetchPlan();
+  }, [searchParams]);
 
   async function handleCheckout(planType: "pro" | "studio") {
     setCheckingOut(planType);
@@ -155,12 +175,25 @@ function UpgradePageContent() {
           <div className="max-w-[1040px] mx-auto flex items-center gap-3">
             <CheckCircle size={20} className="text-green-400 flex-shrink-0" />
             <div>
-              <p className="text-body font-semibold text-green-400">
-                Pagamento confirmado! Bem-vindo ao plano {userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}.
-              </p>
-              <p className="text-caption text-green-400/70">
-                Sua assinatura já está ativa. Aproveite todos os recursos!
-              </p>
+              {userPlan !== "free" ? (
+                <>
+                  <p className="text-body font-semibold text-green-400">
+                    Pagamento confirmado! Bem-vindo ao plano {userPlan.charAt(0).toUpperCase() + userPlan.slice(1)}.
+                  </p>
+                  <p className="text-caption text-green-400/70">
+                    Sua assinatura já está ativa. Aproveite todos os recursos!
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-body font-semibold text-green-400">
+                    Pagamento confirmado! Ativando sua assinatura…
+                  </p>
+                  <p className="text-caption text-green-400/70">
+                    Aguarde alguns segundos enquanto processamos seu plano.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
