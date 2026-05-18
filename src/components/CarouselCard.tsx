@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MoreHorizontal, Newspaper } from "lucide-react";
 import { Badge, BadgeStatus } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
-import SlidePreview from "@/components/SlidePreview";
+import SlidePreview, { CANVAS_W } from "@/components/SlidePreview";
 
 export interface CarouselCardData {
   id: string;
@@ -18,14 +18,28 @@ export interface CarouselCardData {
 }
 
 export function CarouselCard({ data }: { data: CarouselCardData }) {
+  const thumbRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(0.26);
+
+  React.useEffect(() => {
+    if (!thumbRef.current) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setScale(entry.contentRect.width / CANVAS_W);
+    });
+    ro.observe(thumbRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <Link href={`/dashboard/editor/${data.id}`} className="group block">
-      <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-border-subtle bg-bg-surface-2 transition-all duration-fast group-hover:-translate-y-0.5 group-hover:border-accent">
+      <div ref={thumbRef} className="relative aspect-[4/5] rounded-lg overflow-hidden border border-border-subtle bg-bg-surface-2 transition-all duration-fast group-hover:-translate-y-0.5 group-hover:border-accent">
         {data.coverSlide
           ? <div className="absolute inset-0 overflow-hidden">
-              <SlidePreview slide={data.coverSlide as any} scale={280 / 1080} />
+              <SlidePreview slide={data.coverSlide as any} scale={scale} style={{ borderRadius: 0 }} />
             </div>
-          : <div className="w-full h-full bg-bg-surface-2" />}
+          : data.thumbnail
+            ? <img src={data.thumbnail} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-bg-surface-2" />}
         <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 40%)" }} />
         {data.isNews && (
           <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-bg-overlay border border-border text-caption text-text-primary backdrop-blur-sm">
