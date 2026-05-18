@@ -1,33 +1,34 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+import mongoose from 'mongoose';
 
-const dataDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+const articleSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  description: { type: String },
+  content: { type: String },
+  url: { type: String, required: true, unique: true },
+  image_url: { type: String },
+  source: { type: String, required: true },
+  source_logo: { type: String },
+  category: { type: String },
+  published_at: { type: String },
+  scraped_at: { type: String, required: true },
+  is_active: { type: Number, default: 1 },
+});
 
-const dbPath = path.join(dataDir, 'news.db');
-export const db = new Database(dbPath);
+export const Article = mongoose.model('Article', articleSchema);
 
-export function initDb() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS articles (
-      id           TEXT PRIMARY KEY,
-      title        TEXT NOT NULL,
-      description  TEXT,
-      content      TEXT,
-      url          TEXT NOT NULL UNIQUE,
-      image_url    TEXT,
-      source       TEXT NOT NULL,
-      source_logo  TEXT,
-      category     TEXT,
-      published_at TEXT,
-      scraped_at   TEXT NOT NULL,
-      is_active    INTEGER DEFAULT 1
-    );
+export async function connectDB() {
+  try {
+    if (mongoose.connection.readyState >= 1) return;
+    await mongoose.connect(process.env.MONGODB_URI!);
+    console.log('[DB] MongoDB conectado.');
+  } catch (err) {
+    console.error('[DB] Erro ao conectar MongoDB:', err);
+    throw err;
+  }
+}
 
-    CREATE INDEX IF NOT EXISTS idx_source     ON articles(source);
-    CREATE INDEX IF NOT EXISTS idx_category   ON articles(category);
-    CREATE INDEX IF NOT EXISTS idx_scraped_at ON articles(scraped_at DESC);
-  `);
+export async function initDb() {
+  await connectDB();
   console.log('[DB] Banco de dados inicializado.');
 }

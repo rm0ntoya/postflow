@@ -13,7 +13,7 @@ router.get('/', async (req: Request, res: Response) => {
     const category = req.query.category as string | undefined;
     const q = req.query.q as string | undefined;
 
-    const { articles, total } = getArticles({ page, limit, source, category, q });
+    const { articles, total } = await getArticles({ page, limit, source, category, q });
     const total_pages = Math.ceil(total / limit);
 
     res.json({ success: true, data: { articles, pagination: { page, limit, total, total_pages } } });
@@ -23,9 +23,9 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/news/sources
-router.get('/sources', (_req: Request, res: Response) => {
+router.get('/sources', async (_req: Request, res: Response) => {
   try {
-    const data = getSources();
+    const data = await getSources();
     res.json({ success: true, data });
   } catch {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
@@ -33,9 +33,9 @@ router.get('/sources', (_req: Request, res: Response) => {
 });
 
 // GET /api/news/categories
-router.get('/categories', (_req: Request, res: Response) => {
+router.get('/categories', async (_req: Request, res: Response) => {
   try {
-    const data = getCategories();
+    const data = await getCategories();
     res.json({ success: true, data });
   } catch {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
@@ -43,9 +43,9 @@ router.get('/categories', (_req: Request, res: Response) => {
 });
 
 // GET /api/news/:id
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const article = getArticleById(req.params.id);
+    const article = await getArticleById(req.params.id);
     if (!article) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Artigo não encontrado' } });
     }

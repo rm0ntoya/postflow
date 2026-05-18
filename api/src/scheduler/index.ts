@@ -16,7 +16,7 @@ async function runScraper(name: string, fn: () => Promise<RawArticle[]>): Promis
     const articles = await fn();
     for (const article of articles) {
       try {
-        const result = insertArticle(article);
+        const result = await insertArticle(article);
         if (result === 'inserted') inserted++;
         else skipped++;
       } catch {
@@ -69,7 +69,7 @@ export function startScheduler() {
   // Às 03:00 — limpar notícias com mais de 7 dias
   cron.schedule('0 3 * * *', async () => {
     console.log('[CRON] Limpando notícias antigas...');
-    cleanOldArticles(7);
+    await cleanOldArticles(7);
   });
 
   console.log('[CRON] Agendador iniciado.');

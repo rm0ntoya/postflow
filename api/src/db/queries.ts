@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { db } from './schema';
+import { Article, connectDB } from './schema';
 import { RawArticle } from '../scrapers';
 
-export interface Article extends RawArticle {
+export interface ArticleDoc extends RawArticle {
   id: string;
   scraped_at: string;
   is_active: number;
@@ -12,17 +12,15 @@ export function generateId(url: string): string {
   return crypto.createHash('md5').update(url).digest('hex');
 }
 
-export function insertArticle(article: RawArticle): 'inserted' | 'skipped' {
+export async function insertArticle(article: RawArticle): Promise<'inserted' | 'skipped'> {
+  await connectDB();
   const id = generateId(article.url);
   const scraped_at = new Date().toISOString();
 
-  const existing = db.prepare('SELECT id FROM articles WHERE url = ?').get(article.url);
+  const existing = await Article.findOne({ url: article.url });
   if (existing) return 'skipped';
 
-  db.prepare(`
-    INSERT INTO articles (id, title, description, content, url, image_url, source, source_logo, category, published_at, scraped_at)
-    VALUES (@id, @title, @description, @content, @url, @image_url, @source, @source_logo, @category, @published_at, @scraped_at)
-  `).run({
+  await Article.create({
     id,
     title: article.title,
     description: article.description ?? null,
@@ -34,74 +32,84 @@ export function insertArticle(article: RawArticle): 'inserted' | 'skipped' {
     category: article.category ?? null,
     published_at: article.published_at ?? null,
     scraped_at,
+    is_active: 1,
   });
 
   return 'inserted';
 }
 
-export function getArticles(params: {
+export async function getArticles(params: {
   page: number;
   limit: number;
   source?: string;
   category?: string;
   q?: string;
 }) {
+  await connectDB();
   const { page, limit, source, category, q } = params;
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE is_active = 1';
-  const bindings: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { is_active: 1 };
+  if (source) filter.source = source;
+  if (category) filter.category = category;
+  if (q) filter.$or = [
+    { title: { $regex: q, $options: 'i' } },
+    { description: { $regex: q, $options: 'i' } },
+  ];
 
-  if (source) { where += ' AND source = @source'; bindings.source = source; }
-  if (category) { where += ' AND category = @category'; bindings.category = category; }
-  if (q) {
-    where += ' AND (title LIKE @q OR description LIKE @q)';
-    bindings.q = `%${q}%`;
-  }
-
-  const total = (db.prepare(`SELECT COUNT(*) as count FROM articles ${where}`).get(bindings) as { count: number }).count;
-
-  const articles = db.prepare(`
-    SELECT id, title, description, url, image_url, source, source_logo, category, published_at, scraped_at
-    FROM articles ${where}
-    ORDER BY scraped_at DESC
-    LIMIT @limit OFFSET @offset
-  `).all({ ...bindings, limit, offset });
+  const total = await Article.countDocuments(filter);
+  const articles = await Article.find(filter)
+    .sort({ scraped_at: -1 })
+    .skip(offset)
+    .limit(limit)
+    .select('id title description url image_url source source_logo category published_at scraped_at')
+    .lean();
 
   return { articles, total };
 }
 
-export function getArticleById(id: string) {
-  return db.prepare('SELECT * FROM articles WHERE id = ? AND is_active = 1').get(id);
+export async function getArticleById(id: string) {
+  await connectDB();
+  return Article.findOne({ id, is_active: 1 }).lean();
 }
 
-export function getSources() {
-  return db.prepare(`
-    SELECT source, COUNT(*) as count, MAX(scraped_at) as last_scraped
-    FROM articles WHERE is_active = 1
-    GROUP BY source ORDER BY count DESC
-  `).all();
+export async function getSources() {
+  await connectDB();
+  return Article.aggregate([
+    { $match: { is_active: 1 } },
+    { $group: { _id: '$source', count: { $sum: 1 }, last_scraped: { $max: '$scraped_at' } } },
+    { $project: { source: '$_id', count: 1, last_scraped: 1, _id: 0 } },
+    { $sort: { count: -1 } },
+  ]);
 }
 
-export function getCategories() {
-  return db.prepare(`
-    SELECT category, COUNT(*) as count
-    FROM articles WHERE is_active = 1 AND category IS NOT NULL
-    GROUP BY category ORDER BY count DESC
-  `).all();
+export async function getCategories() {
+  await connectDB();
+  return Article.aggregate([
+    { $match: { is_active: 1, category: { $ne: null } } },
+    { $group: { _id: '$category', count: { $sum: 1 } } },
+    { $project: { category: '$_id', count: 1, _id: 0 } },
+    { $sort: { count: -1 } },
+  ]);
 }
 
-export function getTotalArticles() {
-  return (db.prepare('SELECT COUNT(*) as count FROM articles WHERE is_active = 1').get() as { count: number }).count;
+export async function getTotalArticles() {
+  await connectDB();
+  return Article.countDocuments({ is_active: 1 });
 }
 
-export function getLastScrape() {
-  const row = db.prepare('SELECT MAX(scraped_at) as last FROM articles').get() as { last: string | null };
-  return row?.last ?? null;
+export async function getLastScrape() {
+  await connectDB();
+  const row = await Article.findOne().sort({ scraped_at: -1 }).select('scraped_at').lean();
+  return row?.scraped_at ?? null;
 }
 
-export function cleanOldArticles(days: number) {
+export async function cleanOldArticles(days: number) {
+  await connectDB();
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-  const result = db.prepare('UPDATE articles SET is_active = 0 WHERE scraped_at < ?').run(cutoff);
-  console.log(`[DB] ${result.changes} artigos marcados como inativos (mais de ${days} dias).`);
+  const result = await Article.updateMany(
+    { scraped_at: { $lt: cutoff } },
+    { $set: { is_active: 0 } }
+  );
+  console.log(`[DB] ${result.modifiedCount} artigos marcados como inativos (mais de ${days} dias).`);
 }
