@@ -646,23 +646,24 @@ export default function NewsProPage() {
         showToast("Conteúdo parcial — usando dados disponíveis.");
       }
 
-      // Build theme and imageSlides for the carousel generator
-      const theme = {
-        source: fullArticle.source,
-        focusPrompt: config.focusPrompt,
-        category: fullArticle.category,
-      };
+      // Build payload matching /api/carousel/generate expected shape
+      const themeStr = config.focusPrompt.trim()
+        ? `${fullArticle.title}\n\nFoco adicional: ${config.focusPrompt.trim()}`
+        : fullArticle.title;
+
+      const pasteContent = [fullArticle.description, fullArticle.content]
+        .filter(Boolean)
+        .join("\n\n");
 
       const body = {
-        topic: fullArticle.title,
-        description: [fullArticle.description, fullArticle.content]
-          .filter(Boolean)
-          .join("\n\n"),
-        slides: config.pages,
+        theme: themeStr,
+        slideCount: config.pages,
+        tone: "direct",
+        detail: "medium",
+        viral: true,
         imageSlides: config.imageSlides,
-        theme,
-        sourceUrl: fullArticle.url,
-        sourceImage: fullArticle.image_url,
+        accentColor: "#FFD700",
+        pasteContent: pasteContent || undefined,
       };
 
       const res = await fetch("/api/carousel/generate", {
@@ -679,10 +680,9 @@ export default function NewsProPage() {
       const data = await res.json();
       const carouselId = data?.carousel?._id || data?._id;
       if (carouselId) {
-        router.push(`/dashboard/editor?id=${carouselId}`);
+        router.push(`/dashboard/editor/${carouselId}`);
       } else {
-        showToast("Carrossel gerado! Abrindo editor…");
-        router.push("/dashboard/editor");
+        throw new Error("ID do carrossel não retornado pela API.");
       }
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Erro ao gerar carrossel.");
