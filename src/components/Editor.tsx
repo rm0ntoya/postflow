@@ -2,16 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Sparkles, MessageCircle, X, ArrowLeft, Undo2, Redo2, MoreHorizontal, Save, ChevronDown } from "lucide-react";
-import Icon from "./Icon";
+import { Sparkles, ArrowLeft, Undo2, Redo2, MoreHorizontal } from "lucide-react";
 import SlidePreview, { resolveBgStyle, CANVAS_W, CANVAS_H } from "./SlidePreview";
 import Toast from "./Toast";
 import { ICarousel, ISlide, IElement } from "@/models/Carousel";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 
-interface ChatMsg { role: "user" | "assistant"; content: string; actions?: string[]; }
 import {
   TextProps, ShapeProps, ImageProps, ProfileProps,
   BackgroundPropsPanel, SlidePropsPanel, LayersList,
@@ -31,8 +28,6 @@ interface EditorProps {
   onSave: (updated: Draft & { _id?: string }) => Promise<void>;
 }
 
-const THUMB_SCALE = 176 / CANVAS_W;
-
 // Task 5 — Filmstrip thumbnail scaling
 const FILMSTRIP_THUMB_W = 156; // 180px - 2*12px padding
 const FILMSTRIP_THUMB_H = Math.round(FILMSTRIP_THUMB_W * (CANVAS_H / CANVAS_W));
@@ -42,7 +37,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [draft, setDraft] = useState<Draft & { _id?: string }>(() => JSON.parse(JSON.stringify(carousel)));
   const [selectedSlide, setSelectedSlide] = useState(0);
   const [selectedEl, setSelectedEl] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(0.38);
+  const [zoom] = useState(0.38);
   const [propsTab, setPropsTab] = useState("design");
   const [history, setHistory] = useState<(Draft & { _id?: string })[]>([]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -51,153 +46,14 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [titleEditing, setTitleEditing] = useState(false);
   const [regenTarget, setRegenTarget] = useState<{ slideIndex: number; elementId?: string } | null>(null);
   const [regenLoading, setRegenLoading] = useState<string | null>(null);
-  const [exportProgress, setExportProgress] = useState<string | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
   const [addingSlide, setAddingSlide] = useState(false);
   const [toast, setToast] = useState("");
   const [viewMode, setViewMode] = useState<"isolated" | "all">("isolated");
-  const [chatOpen, setChatOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const router = useRouter();
 
   const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(""), 3000); };
-  const stageRef = useRef<HTMLDivElement>(null);
-
-  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([
-    { role: "assistant", content: "Olá! Sou seu agente de edição. Me diga o que quer mudar no carrossel — posso editar textos, cores, fundos e muito mais." },
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatStreaming, setChatStreaming] = useState("");
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  function extractActions(text: string): { actions: any[]; displayText: string } {
-    const actions: any[] = [];
-    const blockMatch = text.match(/ACTIONS:\n([\s\S]*?)(?:\n\n|$)/);
-    let displayText = text;
-    if (blockMatch) {
-      displayText = text.replace(blockMatch[0], "").trim();
-      const lines = blockMatch[1].split("\n").map(l => l.trim()).filter(Boolean);
-      for (const line of lines) {
-        try { actions.push(JSON.parse(line)); } catch {}
-      }
-    }
-    const legacyRe = /\[\[ACTION:(.*?)\]\]/g;
-    let m;
-    while ((m = legacyRe.exec(displayText)) !== null) {
-      try {
-        actions.push(JSON.parse(m[1]));
-        displayText = displayText.replace(m[0], "");
-      } catch {}
-    }
-    return { actions, displayText: displayText.trim() };
-  }
-
-  function applyAction(action: any) {
-    try {
-      switch (action.type) {
-        case "editText":
-          if (action.slideIndex != null && action.text != null) {
-            setDraft((d) => {
-              const slide = d.slides[action.slideIndex];
-              if (!slide) return d;
-              const textEls = slide.elements.filter((e: IElement) => e.type === "text");
-              const target = action.elementIndex != null
-                ? textEls[action.elementIndex]
-                : action.elementId
-                  ? slide.elements.find((e: IElement) => e.id === action.elementId)
-                  : textEls[0];
-              if (!target) return d;
-              const slides = d.slides.map((s, i) =>
-                i !== action.slideIndex ? s : {
-                  ...s,
-                  elements: s.elements.map((e: IElement) =>
-                    e.id !== target.id ? e : { ...e, text: action.text, segments: undefined }
-                  ),
-                }
-              );
-              return { ...d, slides };
-            });
-          }
-          break;
-        case "editAccentColor":
-          if (action.color) setDraft((d) => ({ ...d, accentColor: action.color }));
-          break;
-        case "editSlideBackground":
-          if (action.slideIndex != null && action.bgOverride) {
-            setDraft((d) => {
-              const slides = d.slides.map((s, i) =>
-                i === action.slideIndex ? { ...s, bgOverride: action.bgOverride } : s
-              );
-              return { ...d, slides };
-            });
-          }
-          break;
-        case "selectSlide":
-          if (action.slideIndex != null) setSelectedSlide(action.slideIndex);
-          break;
-      }
-    } catch {}
-  }
-
-  async function sendChat() {
-    const msg = chatInput.trim();
-    if (!msg || chatLoading) return;
-    setChatInput("");
-    setChatMsgs((prev) => [...prev, { role: "user", content: msg }]);
-    setChatLoading(true);
-    setChatStreaming("");
-
-    const history = chatMsgs.map((m) => ({ role: m.role, content: m.content }));
-
-    try {
-      const res = await fetch(`/api/carousel/${draft._id}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, history, carousel: draft }),
-      });
-
-      if (!res.body) throw new Error("No stream");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let full = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const json = JSON.parse(line.slice(6));
-            if (json.text) {
-              full += json.text;
-              setChatStreaming(full);
-              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }
-          } catch {}
-        }
-      }
-
-      const { actions, displayText } = extractActions(full);
-      const actionLabels = actions.map(a => { applyAction(a); return a.type as string; });
-
-      setChatMsgs((prev) => [...prev, {
-        role: "assistant",
-        content: displayText.trim(),
-        actions: actionLabels.length ? actionLabels : undefined,
-      }]);
-    } catch {
-      setChatMsgs((prev) => [...prev, { role: "assistant", content: "Erro ao conectar com o agente. Tente novamente." }]);
-    } finally {
-      setChatLoading(false);
-      setChatStreaming("");
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }
 
   useEffect(() => {
     if (Object.keys(externallyGeneratedImages).length === 0) return;
@@ -370,56 +226,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     if (selectedSlide >= idx) setSelectedSlide(Math.max(0, selectedSlide - 1));
   };
 
-  const addText = () => {
-    pushHistory();
-    const id = `e${Date.now()}`;
-    setDraft((d) => ({
-      ...d,
-      slides: d.slides.map((s, i) => i === selectedSlide
-        ? { ...s, elements: [...s.elements, { id, type: "text" as const, text: "Texto novo", x: 80, y: 500, w: CANVAS_W - 160, h: 140, fontSize: 60, weight: 700, color: "#fff", font: "Space Grotesk", align: "left" }] }
-        : s),
-    }));
-    setSelectedEl(id);
-  };
-
-  const addImage = () => {
-    pushHistory();
-    const id = `e${Date.now()}`;
-    setDraft((d) => ({
-      ...d,
-      slides: d.slides.map((s, i) => i === selectedSlide
-        ? { ...s, elements: [...s.elements, { id, type: "image" as const, x: 90, y: 200, w: CANVAS_W - 180, h: 520, radius: 18 }] }
-        : s),
-    }));
-    setSelectedEl(id);
-    setPropsTab("design");
-  };
-
-  const addShape = () => {
-    pushHistory();
-    const id = `e${Date.now()}`;
-    setDraft((d) => ({
-      ...d,
-      slides: d.slides.map((s, i) => i === selectedSlide
-        ? { ...s, elements: [...s.elements, { id, type: "shape" as const, shape: "rect", x: 200, y: 400, w: 680, h: 300, color: "#A855F7", radius: 20, opacity: 1 }] }
-        : s),
-    }));
-    setSelectedEl(id);
-  };
-
-  const addProfileEl = () => {
-    pushHistory();
-    const id = `e${Date.now()}`;
-    setDraft((d) => ({
-      ...d,
-      slides: d.slides.map((s, i) => i === selectedSlide
-        ? { ...s, elements: [...s.elements, { id, type: "profile" as const, text: "@seuinstagram", photoUrl: "", x: 60, y: 80, w: 500, h: 56, fontSize: 28, weight: 700, color: "#FFFFFF", font: "Space Grotesk" }] }
-        : s),
-    }));
-    setSelectedEl(id);
-    setPropsTab("design");
-  };
-
   const handleRegenImage = async (opts: RegenOptions) => {
     if (!regenTarget || !draft._id) return;
     const { slideIndex, elementId } = regenTarget;
@@ -468,93 +274,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
       console.error("[handleRegenImage]", e);
     } finally {
       setRegenLoading(null);
-    }
-  };
-
-  const handleDownloadZip = async () => {
-    setExportProgress("Preparando export...");
-    try {
-      const [{ default: html2canvas }, { default: JSZip }] = await Promise.all([
-        import("html2canvas"),
-        import("jszip"),
-      ]);
-
-      await document.fonts.ready;
-
-      const zip = new JSZip();
-      const frames = document.querySelectorAll<HTMLElement>("[data-slide-frame]");
-      const total = frames.length;
-
-      const exportHost = document.createElement("div");
-      exportHost.setAttribute("aria-hidden", "true");
-      exportHost.style.cssText = [
-        "position:fixed",
-        "top:-99999px",
-        "left:-99999px",
-        `width:${CANVAS_W}px`,
-        `height:${CANVAS_H}px`,
-        "overflow:hidden",
-        "pointer-events:none",
-      ].join(";");
-      document.body.appendChild(exportHost);
-
-      for (let i = 0; i < total; i++) {
-        setExportProgress(`Exportando ${i + 1}/${total}…`);
-        const frame = frames[i];
-        const clone = frame.cloneNode(true) as HTMLElement;
-        clone.style.width  = `${CANVAS_W}px`;
-        clone.style.height = `${CANVAS_H}px`;
-        clone.style.borderRadius = "0";
-        clone.style.position = "relative";
-
-        const elContainer = clone.querySelector<HTMLElement>("[data-elements-container]");
-        if (elContainer) {
-          elContainer.style.transform = "none";
-          elContainer.style.width  = `${CANVAS_W}px`;
-          elContainer.style.height = `${CANVAS_H}px`;
-        }
-
-        clone.querySelectorAll<HTMLElement>(".handle, .selected").forEach((el) => {
-          el.style.outline = "none";
-          el.style.boxShadow = "none";
-          el.classList.remove("selected");
-        });
-
-        exportHost.appendChild(clone);
-
-        const canvas = await html2canvas(clone, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: "#000000",
-          logging: false,
-          imageTimeout: 30000,
-          width: CANVAS_W,
-          height: CANVAS_H,
-        });
-
-        const blob = await new Promise<Blob>((resolve) =>
-          canvas.toBlob((b) => resolve(b!), "image/png", 1.0)
-        );
-
-        zip.file(`${draft.title.replace(/[^a-z0-9]/gi, "-")}-slide-${i + 1}.png`, blob);
-        clone.remove();
-      }
-
-      document.body.removeChild(exportHost);
-
-      setExportProgress("Comprimindo ZIP...");
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${draft.title.replace(/[^a-z0-9]/gi, "-")}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExportProgress(null);
     }
   };
 
@@ -665,9 +384,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   };
 
   const accentColor = draft.accentColor || "#FFD700";
-
-  const slideLabel = (idx: number) =>
-    idx === 0 ? "Capa" : idx === draft.slides.length - 1 ? "CTA" : "Desenvolvimento";
 
   return (
     <>
