@@ -119,7 +119,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/user/api-key", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ geminiApiKey: geminiKey.trim() }),
+        body: JSON.stringify({ apiKey: geminiKey.trim() }),
       });
       if (res.ok) { showToast("Chave API salva com sucesso."); setGeminiKey(""); }
       else { const d = await res.json(); showToast(d.error || "Erro ao salvar chave."); }
