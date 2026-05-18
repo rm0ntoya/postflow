@@ -91,6 +91,29 @@ const FAQ_ITEMS: FAQ[] = [
 export default function UpgradePage() {
   const [isYearly, setIsYearly] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+
+  async function handleCheckout(planType: "pro" | "studio") {
+    setCheckingOut(planType);
+    try {
+      const res = await fetch("/api/checkout/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planType }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Erro ao criar checkout.");
+        return;
+      }
+      const url = data.checkoutUrl || data.sandboxUrl;
+      if (url) window.location.href = url;
+    } catch {
+      alert("Erro de conexão. Tente novamente.");
+    } finally {
+      setCheckingOut(null);
+    }
+  }
 
   const getPrice = (monthlyPrice: number) => {
     if (isYearly) {
@@ -211,9 +234,16 @@ export default function UpgradePage() {
                       variant={plan.current ? "secondary" : "primary"}
                       size="lg"
                       className="w-full"
-                      disabled={plan.current}
+                      disabled={plan.current || checkingOut !== null}
+                      onClick={() => {
+                        if (!plan.current && (plan.id === "pro" || plan.id === "studio")) {
+                          handleCheckout(plan.id as "pro" | "studio");
+                        }
+                      }}
                     >
-                      {plan.current
+                      {checkingOut === plan.id
+                        ? "Redirecionando..."
+                        : plan.current
                         ? "Plano atual"
                         : `Assinar ${plan.name}`}
                     </Button>
