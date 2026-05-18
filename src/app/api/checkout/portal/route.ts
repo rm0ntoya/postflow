@@ -34,7 +34,7 @@ export async function POST() {
     await User.findByIdAndUpdate(session.userId, { stripeCustomerId: customerId });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl = process.env.BASE_URL || process.env.NEXT_PUBLIC_BASE_URL;
   if (!baseUrl) return NextResponse.json({ error: "Missing NEXT_PUBLIC_BASE_URL" }, { status: 503 });
 
   try {
