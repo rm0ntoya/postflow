@@ -18,7 +18,8 @@ export async function GET() {
 
     const [
       totalUsers, totalCarousels, newUsersToday, newUsersWeek,
-      usersWithKey, bannedUsers, adminCount, carouselsToday, config,
+      usersWithKey, bannedUsers, adminCount, carouselsToday,
+      proUsers, studioUsers, trialUsers, config,
     ] = await Promise.all([
       User.countDocuments(),
       Carousel.countDocuments(),
@@ -28,12 +29,20 @@ export async function GET() {
       User.countDocuments({ isBanned: true }),
       User.countDocuments({ isAdmin: true }),
       Carousel.countDocuments({ createdAt: { $gte: todayStart } }),
+      User.countDocuments({ plan: "pro", planExpiresAt: { $gt: now } }),
+      User.countDocuments({ plan: "studio", planExpiresAt: { $gt: now } }),
+      User.countDocuments({ trialEndsAt: { $gt: now }, plan: "free" }),
       getAppConfig(),
     ]);
+
+    const mrrEstimated = (proUsers * (config.mpProPriceReais ?? 49)) + (studioUsers * (config.mpStudioPriceReais ?? 149));
+    const conversionRate = totalUsers > 0 ? Math.round(((proUsers + studioUsers) / totalUsers) * 100) : 0;
 
     return NextResponse.json({
       totalUsers, totalCarousels, newUsersToday, newUsersWeek,
       usersWithKey, bannedUsers, adminCount, carouselsToday,
+      proUsers, studioUsers, trialUsers,
+      mrrEstimated, conversionRate,
       maintenanceMode: config.maintenanceMode,
     });
   } catch (err: unknown) {
