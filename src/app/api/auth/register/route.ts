@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const trialDays = cfg.trialDays ?? 7;
+    const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
     const user = await User.create({ name, email, password: hashed, trialEndsAt });
 
     const token = await signToken({
