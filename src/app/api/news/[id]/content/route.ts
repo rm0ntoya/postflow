@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { getArticleById } from "../../../../../../lib/news/queries";
+import { getArticleById } from "@/lib/news/queries";
 
 const NOISE_SELECTORS = [
   "script", "style", "nav", "header", "footer",

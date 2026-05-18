@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getArticleById } from "../../../../../lib/news/queries";
+import { getArticleById } from "@/lib/news/queries";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
