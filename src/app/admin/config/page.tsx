@@ -11,7 +11,6 @@ interface AppConfig {
   stripePriceIdPro: string;
   stripePriceIdStudio: string;
   stripeWebhookSecret: string;
-  stripeEnabled: boolean;
   trialDays: number;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
@@ -89,7 +88,6 @@ export default function AdminConfigPage() {
         stripePriceIdPro: d.stripePriceIdPro ?? "",
         stripePriceIdStudio: d.stripePriceIdStudio ?? "",
         stripeWebhookSecret: d.stripeWebhookSecret ?? "",
-        stripeEnabled: d.stripeEnabled ?? false,
         trialDays: d.trialDays ?? 7,
         recaptchaSiteKey: d.recaptchaSiteKey ?? "",
         recaptchaSecretKey: d.recaptchaSecretKey ?? "",
@@ -143,11 +141,10 @@ export default function AdminConfigPage() {
       </div>
 
       {/* ── Stripe ── */}
-      <div style={{ ...cardS, borderColor: cfg.stripeEnabled ? "rgba(99,102,241,0.35)" : "#1e1e1e" }}>
+      <div style={{ ...cardS, borderColor: "#1e1e1e" }}>
         <SectionHeader
           icon="💳" title="Stripe"
-          desc="Habilita o checkout Pro via Stripe"
-          on={cfg.stripeEnabled} onChange={() => set("stripeEnabled", !cfg.stripeEnabled)}
+          desc="Configure as chaves Stripe para habilitar o checkout"
         />
         <div style={{ background: "#0d1020", border: "1px solid #1e2040", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#a5b4fc", marginBottom: 16 }}>
           <b>Webhook URL:</b> <code style={{ color: "#c7d2fe" }}>{typeof window !== "undefined" ? window.location.origin : "https://seu-dominio.com"}/api/webhooks/stripe</code><br />
