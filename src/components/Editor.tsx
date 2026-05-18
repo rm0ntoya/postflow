@@ -643,7 +643,22 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     const newElements = template.build(params);
     setDraft(d => ({
       ...d,
-      slides: d.slides.map((s, idx) => idx === selectedSlide ? { ...s, elements: newElements } : s),
+      slides: d.slides.map((s, idx) => {
+        if (idx !== selectedSlide) return s;
+        if (template.category === "texto") {
+          // Text templates: strip background image entirely
+          return { ...s, elements: newElements, bgImageUrl: undefined, bgThumbUrl: undefined };
+        }
+        // Image templates: keep bgImageUrl but reset position to centered defaults
+        return {
+          ...s,
+          elements: newElements,
+          bgPositionX: 50,
+          bgPositionY: 50,
+          bgScale: 1,
+          bgSize: "cover",
+        };
+      }),
     }));
     setSelectedEl(null);
     showToast(`Modelo "${template.name}" aplicado.`);

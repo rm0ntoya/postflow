@@ -17,15 +17,28 @@ interface TemplatePickerProps {
   onApply: (template: SlideTemplate) => void;
 }
 
-const CATEGORIES: { key: TemplateCategory; label: string; templates: SlideTemplate[] }[] = [
-  { key: "texto",  label: "Texto",  templates: TEXT_TEMPLATES  },
-  { key: "imagem", label: "Imagem", templates: IMAGE_TEMPLATES },
-  { key: "cta",    label: "CTA",    templates: CTA_TEMPLATES   },
-];
-
 export function TemplatePicker({ slide, slideIndex, totalSlides, accentColor, handle, onApply }: TemplatePickerProps) {
-  const [tab, setTab] = React.useState<TemplateCategory>("texto");
+  const hasBgImage = !!(slide as any).bgImageUrl;
+
+  // If slide has background image, text-only templates are incompatible — hide them
+  const CATEGORIES: { key: TemplateCategory; label: string; templates: SlideTemplate[] }[] = hasBgImage
+    ? [
+        { key: "imagem", label: "Imagem", templates: IMAGE_TEMPLATES },
+        { key: "cta",    label: "CTA",    templates: CTA_TEMPLATES   },
+      ]
+    : [
+        { key: "texto",  label: "Texto",  templates: TEXT_TEMPLATES  },
+        { key: "cta",    label: "CTA",    templates: CTA_TEMPLATES   },
+      ];
+
+  const defaultTab = hasBgImage ? "imagem" : "texto";
+  const [tab, setTab] = React.useState<TemplateCategory>(defaultTab);
   const [hovered, setHovered] = React.useState<string | null>(null);
+
+  // Reset tab when slide changes (might cross hasBgImage boundary)
+  React.useEffect(() => {
+    setTab(hasBgImage ? "imagem" : "texto");
+  }, [hasBgImage]);
 
   const previewParams: TemplateParams = React.useMemo(() => ({
     cid: "preview",
