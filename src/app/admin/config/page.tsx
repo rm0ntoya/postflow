@@ -6,12 +6,12 @@ interface AppConfig {
   maintenanceBanner: string;
   announcementBanner: string;
   announcementActive: boolean;
-  mpAccessToken: string;
-  mpPublicKey: string;
-  mpWebhookSecret: string;
-  mpEnabled: boolean;
-  mpProPriceReais: number;
-  mpStudioPriceReais: number;
+  stripeSecretKey: string;
+  stripePublishableKey: string;
+  stripePriceIdPro: string;
+  stripePriceIdStudio: string;
+  stripeWebhookSecret: string;
+  stripeEnabled: boolean;
   trialDays: number;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
@@ -84,13 +84,13 @@ export default function AdminConfigPage() {
         maintenanceBanner: d.maintenanceBanner ?? "",
         announcementBanner: d.announcementBanner ?? "",
         announcementActive: d.announcementActive ?? false,
-        mpAccessToken: d.mpAccessToken ?? "",
-        mpPublicKey: d.mpPublicKey ?? "",
-        mpWebhookSecret: d.mpWebhookSecret ?? "",
-        mpEnabled: d.mpEnabled ?? false,
-        mpProPriceReais: d.mpProPriceReais ?? 97,
-          mpStudioPriceReais: d.mpStudioPriceReais ?? 149,
-          trialDays: d.trialDays ?? 7,
+        stripeSecretKey: d.stripeSecretKey ?? "",
+        stripePublishableKey: d.stripePublishableKey ?? "",
+        stripePriceIdPro: d.stripePriceIdPro ?? "",
+        stripePriceIdStudio: d.stripePriceIdStudio ?? "",
+        stripeWebhookSecret: d.stripeWebhookSecret ?? "",
+        stripeEnabled: d.stripeEnabled ?? false,
+        trialDays: d.trialDays ?? 7,
         recaptchaSiteKey: d.recaptchaSiteKey ?? "",
         recaptchaSecretKey: d.recaptchaSecretKey ?? "",
         recaptchaEnabled: d.recaptchaEnabled ?? false,
@@ -142,61 +142,66 @@ export default function AdminConfigPage() {
         <input value={cfg.announcementBanner} onChange={(e) => set("announcementBanner", e.target.value)} style={inputS} placeholder="Ex: Nova funcionalidade lançada! Confira..." />
       </div>
 
-      {/* ── Mercado Pago ── */}
-      <div style={{ ...cardS, borderColor: cfg.mpEnabled ? "rgba(0,180,80,0.35)" : "#1e1e1e" }}>
+      {/* ── Stripe ── */}
+      <div style={{ ...cardS, borderColor: cfg.stripeEnabled ? "rgba(99,102,241,0.35)" : "#1e1e1e" }}>
         <SectionHeader
-          icon="💳" title="Mercado Pago"
-          desc="Habilita o checkout Pro via Mercado Pago"
-          on={cfg.mpEnabled} onChange={() => set("mpEnabled", !cfg.mpEnabled)}
+          icon="💳" title="Stripe"
+          desc="Habilita o checkout Pro via Stripe"
+          on={cfg.stripeEnabled} onChange={() => set("stripeEnabled", !cfg.stripeEnabled)}
         />
+        <div style={{ background: "#0d1020", border: "1px solid #1e2040", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#a5b4fc", marginBottom: 16 }}>
+          <b>Webhook URL:</b> <code style={{ color: "#c7d2fe" }}>{typeof window !== "undefined" ? window.location.origin : "https://seu-dominio.com"}/api/webhooks/stripe</code><br />
+          Configure esta URL no Stripe Dashboard em Settings → Webhooks → Add endpoint
+        </div>
         <div style={fieldS}>
-          <label style={labelS}>Access Token (começa com APP_USR ou TEST)</label>
+          <label style={labelS}>Stripe Secret Key</label>
           <input
-            value={cfg.mpAccessToken}
-            onChange={(e) => set("mpAccessToken", e.target.value)}
+            value={cfg.stripeSecretKey}
+            onChange={(e) => set("stripeSecretKey", e.target.value)}
             style={{ ...inputS, fontFamily: "monospace", fontSize: 13 }}
-            placeholder="APP_USR-000000000000000-000000-..."
+            placeholder="sk_live_... or sk_test_..."
             type="password"
           />
         </div>
         <div style={fieldS}>
-          <label style={labelS}>Public Key</label>
+          <label style={labelS}>Stripe Publishable Key</label>
           <input
-            value={cfg.mpPublicKey}
-            onChange={(e) => set("mpPublicKey", e.target.value)}
+            value={cfg.stripePublishableKey}
+            onChange={(e) => set("stripePublishableKey", e.target.value)}
             style={{ ...inputS, fontFamily: "monospace", fontSize: 13 }}
-            placeholder="APP_USR-00000000-0000-0000-0000-000000000000"
+            placeholder="pk_live_... or pk_test_..."
           />
         </div>
         <div style={fieldS}>
-          <label style={labelS}>Webhook Secret (para verificação de assinatura)</label>
+          <label style={labelS}>Pro Plan Price ID (Stripe)</label>
           <input
-            value={cfg.mpWebhookSecret}
-            onChange={(e) => set("mpWebhookSecret", e.target.value)}
+            value={cfg.stripePriceIdPro}
+            onChange={(e) => set("stripePriceIdPro", e.target.value)}
             style={{ ...inputS, fontFamily: "monospace", fontSize: 13 }}
-            placeholder="Deixe vazio para pular verificação"
+            placeholder="price_1ABC123..."
+          />
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Price ID do Stripe Dashboard → Products → Select Product → Pricing</div>
+        </div>
+        <div style={fieldS}>
+          <label style={labelS}>Studio Plan Price ID (Stripe)</label>
+          <input
+            value={cfg.stripePriceIdStudio}
+            onChange={(e) => set("stripePriceIdStudio", e.target.value)}
+            style={{ ...inputS, fontFamily: "monospace", fontSize: 13 }}
+            placeholder="price_1XYZ789..."
+          />
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Price ID do Stripe Dashboard</div>
+        </div>
+        <div style={fieldS}>
+          <label style={labelS}>Stripe Webhook Secret</label>
+          <input
+            value={cfg.stripeWebhookSecret}
+            onChange={(e) => set("stripeWebhookSecret", e.target.value)}
+            style={{ ...inputS, fontFamily: "monospace", fontSize: 13 }}
+            placeholder="whsec_..."
             type="password"
           />
-        </div>
-        <div style={fieldS}>
-          <label style={labelS}>Preço do Plano Pro (R$)</label>
-          <input
-            value={cfg.mpProPriceReais}
-            onChange={(e) => set("mpProPriceReais", Number(e.target.value))}
-            style={{ ...inputS, width: 120 }}
-            type="number"
-            min={1}
-          />
-        </div>
-        <div style={fieldS}>
-          <label style={labelS}>Preço do Plano Studio (R$)</label>
-          <input
-            value={cfg.mpStudioPriceReais ?? 149}
-            onChange={(e) => set("mpStudioPriceReais", Number(e.target.value))}
-            style={{ ...inputS, width: 120 }}
-            type="number"
-            min={1}
-          />
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Signing secret do Stripe Dashboard → Webhooks</div>
         </div>
         <div style={fieldS}>
           <label style={labelS}>Dias de Trial Gratuito</label>
@@ -208,10 +213,6 @@ export default function AdminConfigPage() {
             min={0}
           />
           <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Aplicado a novos cadastros. Não altera trials existentes.</div>
-        </div>
-        <div style={{ background: "#0d1a12", border: "1px solid #1a3020", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#4ade80" }}>
-          <b>Webhook URL</b> para configurar no painel MP:<br />
-          <code style={{ color: "#86efac" }}>{typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/mercadopago</code>
         </div>
       </div>
 
