@@ -68,7 +68,7 @@ Seja específico, criativo e estratégico. Use exemplos concretos.`;
     async start(controller) {
       try {
         const response = await ai.models.generateContentStream({
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           contents: [{ role: "user", parts: [{ text: prompt }] }],
         });
 

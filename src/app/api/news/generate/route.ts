@@ -9,7 +9,7 @@ import { CANVAS_W, CANVAS_H, parseSegments } from "@/lib/canvas";
 
 export const maxDuration = 60;
 
-const DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
+const DEFAULT_TEXT_MODEL = "gemini-2.5-flash";
 
 interface GeminiSlide {
   slideNumber: number;

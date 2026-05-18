@@ -113,7 +113,7 @@ NAO use markdown, NAO use blocos de codigo, NAO use colchetes duplos. Apenas ACT
     async start(controller) {
       try {
         const response = await ai.models.generateContentStream({
-          model: user.textModel || "gemini-2.0-flash",
+          model: user.textModel || "gemini-2.5-flash",
           contents,
           config: { systemInstruction: systemPrompt },
         });

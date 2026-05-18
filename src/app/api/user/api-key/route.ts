@@ -12,7 +12,7 @@ const TEXT_MODELS = [
   { id: "gemini-3.1-flash-lite",        label: "Gemini 3.1 Flash-Lite",        tier: "paid" },
   { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash-Lite Preview", tier: "paid" },
   { id: "gemini-3.1-pro-preview",       label: "Gemini 3.1 Pro (Preview)",     tier: "paid" },
-  { id: "gemini-2.0-flash",             label: "Gemini 2.0 Flash (descontinuado)", tier: "free" },
+  { id: "gemini-2.5-flash",             label: "Gemini 2.0 Flash (descontinuado)", tier: "free" },
 ] as const;
 
 const IMAGE_MODELS = [
@@ -42,7 +42,7 @@ export async function GET() {
     }
 
     const modelInfo = {
-      textModel: user.textModel || "gemini-2.0-flash",
+      textModel: user.textModel || "gemini-2.5-flash",
       imageModel: user.imageModel || "gemini-2.5-flash-image",
     };
 

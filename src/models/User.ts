@@ -63,7 +63,7 @@ const UserSchema = new Schema<IUser>(
     geminiKeyIv: { type: String, select: false },
     geminiKeyAuthTag: { type: String, select: false },
     hasGeminiKey: { type: Boolean, default: false },
-    textModel: { type: String, default: "gemini-2.0-flash" },
+    textModel: { type: String, default: "gemini-2.5-flash" },
     imageModel: { type: String, default: "gemini-3-pro-image-preview" },
     aiContext: { type: Schema.Types.Mixed },
     brandAccentColor: { type: String, default: "#FFD700" },
