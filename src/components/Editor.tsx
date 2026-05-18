@@ -43,11 +43,11 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
   const [historyIndex, setHistoryIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [titleEditing, setTitleEditing] = useState(false);
+  const [_titleEditing, setTitleEditing] = useState(false);
   const [regenTarget, setRegenTarget] = useState<{ slideIndex: number; elementId?: string } | null>(null);
   const [regenLoading, setRegenLoading] = useState<string | null>(null);
   const [showAddSlide, setShowAddSlide] = useState(false);
-  const [addingSlide, setAddingSlide] = useState(false);
+  const [_addingSlide, setAddingSlide] = useState(false);
   const [toast, setToast] = useState("");
   const [viewMode, setViewMode] = useState<"isolated" | "all">("isolated");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -733,7 +733,6 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
               <TemplatePicker
                 slide={slide}
                 slideIndex={selectedSlide}
-                totalSlides={draft.slides.length}
                 accentColor={accentColor}
                 handle={slide.elements.find(e => e.type === "profile")?.text || "@seuhandle"}
                 onApply={applyTemplate}

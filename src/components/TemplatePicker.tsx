@@ -11,13 +11,12 @@ import {
 interface TemplatePickerProps {
   slide: ISlide;
   slideIndex: number;
-  totalSlides: number;
   accentColor: string;
   handle: string;
   onApply: (template: SlideTemplate) => void;
 }
 
-export function TemplatePicker({ slide, slideIndex, totalSlides, accentColor, handle, onApply }: TemplatePickerProps) {
+export function TemplatePicker({ slide, slideIndex, accentColor, handle, onApply }: TemplatePickerProps) {
   const hasBgImage = !!(slide as any).bgImageUrl;
 
   // If slide has background image, text-only templates are incompatible — hide them

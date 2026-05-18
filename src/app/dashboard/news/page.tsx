@@ -6,7 +6,6 @@ import { AlertCircle, ChevronRight, Globe, Newspaper, MessageCircle, Zap } from 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Chip } from "@/components/ui/Chip";
-import { Card } from "@/components/ui/Card";
 import Toast from "@/components/Toast";
 
 // ───────────────────────────────────────────────────────────────────────

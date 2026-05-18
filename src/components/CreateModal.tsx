@@ -32,7 +32,6 @@ export interface GenerateSettings {
   faceSlides: number[];
   accentColor: string;
   paletteColors?: string[];
-  paletteId?: string;
   useFace: boolean;
 }
 

@@ -29,7 +29,7 @@ Slides e elementos de texto:
 ${slides}`;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, _ctx: { params: { id: string } }) {
   const session = await getSessionUser();
   if (!session) return new Response(JSON.stringify({ error: "Não autenticado." }), { status: 401 });
 

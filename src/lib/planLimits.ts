@@ -3,7 +3,7 @@ import User from "@/models/User";
 
 export type LimitResult =
   | { allowed: true }
-  | { allowed: false; reason: "TRIAL_EXPIRED" | "LIMIT_REACHED" | "NO_PLAN" | "NO_STUDIO" };
+  | { allowed: false; reason: "TRIAL_EXPIRED" | "LIMIT_REACHED" | "NO_PLAN" };
 
 export async function checkCarouselLimit(userId: string): Promise<LimitResult> {
   await connectDB();

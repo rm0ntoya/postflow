@@ -6,7 +6,6 @@ import {
   Search,
   ChevronRight,
   ChevronLeft,
-  Filter,
   Newspaper,
   Loader2,
   CheckCircle2,
@@ -16,7 +15,6 @@ import {
   Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import Toast from "@/components/Toast";
 import { useRouter } from "next/navigation";
 

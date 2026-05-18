@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 

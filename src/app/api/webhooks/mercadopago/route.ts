@@ -10,7 +10,6 @@ export const maxDuration = 30;
 // Verify MP HMAC-SHA256 signature
 function verifySignature(secret: string, xSignature: string, xRequestId: string, dataId: string): boolean {
   try {
-    const manifest = `id:${dataId};request-id:${xRequestId};ts:${xSignature.split(";").find(p => p.startsWith("ts="))?.split("=")[1] ?? ""};`;
     const ts = xSignature.split(";").find(p => p.startsWith("ts="))?.split("=")[1];
     const v1 = xSignature.split(";").find(p => p.startsWith("v1="))?.split("=")[1];
     if (!ts || !v1) return false;

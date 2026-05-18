@@ -6,7 +6,7 @@ import User from "@/models/User";
 import Carousel, { IElement, ISlide } from "@/models/Carousel";
 import { getSessionUser } from "@/lib/auth";
 import { decryptApiKey } from "@/lib/encryption";
-import { CANVAS_W, CANVAS_H, parseSegments } from "@/lib/canvas";
+import { CANVAS_W, CANVAS_H } from "@/lib/canvas";
 import {
   TemplateParams,
   tpl_centeredPower, tpl_editorialCentered, tpl_impact, tpl_quoteStyle,
@@ -32,31 +32,19 @@ interface GeminiSlide {
 function buildCanvasSlides(
   geminiSlides: GeminiSlide[],
   cid: string,
-  viral: boolean,
   accentColor: string,
   handle: string,
-  imageSlides: number[],
-  profilePhotoUrl?: string
+  imageSlides: number[]
 ): ISlide[] {
   const count = geminiSlides.length;
   const W = CANVAS_W;
   const H = CANVAS_H;
 
-  // Count text-only slides to rotate their template independently
-  let textSlideCount = 0;
 
   return geminiSlides.map((gs, i) => {
     const els: IElement[] = [];
-    const segments = parseSegments(gs.title, accentColor);
     const isFirst = i === 0;
     const isLast = i === count - 1;
-
-    const addProfile = (y: number, x = 60, w = 500) => {
-      els.push({
-        id: `${cid}-s${i}-profile`, type: "profile", text: handle, photoUrl: profilePhotoUrl || "",
-        x, y, w, h: 56, fontSize: 28, weight: 700, color: "#FFFFFF", font: "Space Grotesk",
-      });
-    };
 
     const addPageNum = () => {
       els.push({
@@ -67,9 +55,6 @@ function buildCanvasSlides(
     };
 
     const hasImage = imageSlides.includes(i) || isFirst || isLast;
-
-    const TBF = "TheBoldFont";
-    const SG  = "Space Grotesk";
     const titleText = gs.title.replace(/\*\*/g, "").toUpperCase();
 
     // Randomize middle templates
@@ -158,12 +143,18 @@ function buildPrompt(
     : "";
 
   const toneMap: Record<string, string> = {
+    // Legacy English keys
     direct: "direto e sem rodeios",
     editorial: "editorial e autoral",
     didactic: "didático passo a passo",
     provocative: "provocativo e contraintuitivo",
     casual: "casual e conversacional",
     authoritive: "autoritativo de especialista",
+    // Portuguese keys (used by CreateModal)
+    profissional: "profissional e direto ao ponto",
+    educativo: "educativo, explica passo a passo como um professor",
+    provocativo: "provocativo com ganchos e perguntas fortes",
+    storytelling: "narrativo com história com começo, meio e fim",
   };
 
   const detailMap: Record<string, string> = {
@@ -308,11 +299,9 @@ export async function POST(req: NextRequest) {
     const canvasSlides = buildCanvasSlides(
       parsed.slides,
       cid,
-      viral,
       resolvedAccent,
       handle,
-      imageSlides,
-      user.profileAvatarUrl || undefined
+      imageSlides
     );
 
     carousel.slides = canvasSlides;

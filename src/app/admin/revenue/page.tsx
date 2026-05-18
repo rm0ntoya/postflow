@@ -11,11 +11,11 @@ interface Payment {
   user: { name: string; email: string } | null;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  approved: "color:#4ade80;background:rgba(74,222,128,0.1)",
-  pending: "color:#facc15;background:rgba(250,204,21,0.1)",
-  rejected: "color:#f87171;background:rgba(248,113,113,0.1)",
-  cancelled: "color:#555;background:#1a1a1a",
+const STATUS_STYLES: Record<string, React.CSSProperties> = {
+  approved: { color: "#4ade80", background: "rgba(74,222,128,0.1)" },
+  pending:  { color: "#facc15", background: "rgba(250,204,21,0.1)" },
+  rejected: { color: "#f87171", background: "rgba(248,113,113,0.1)" },
+  cancelled:{ color: "#555",    background: "#1a1a1a" },
 };
 
 const tdS: React.CSSProperties = { padding: "12px 16px", borderBottom: "1px solid #161616", fontSize: 13, verticalAlign: "middle" };
@@ -117,7 +117,7 @@ export default function AdminRevenuePage() {
                   </td>
                   <td style={{ ...tdS, fontWeight: 700 }}>R$ {p.amountBRL.toFixed(2)}</td>
                   <td style={tdS}>
-                    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 99, ...(Object.fromEntries((STATUS_COLORS[p.status] || STATUS_COLORS.cancelled).split(";").map(s => s.split(":").map(x => x.trim())).filter(([k]) => k).map(([k, v]) => [k, v]))) }}>
+                    <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 99, ...(STATUS_STYLES[p.status] ?? STATUS_STYLES.cancelled) }}>
                       {p.status}
                     </span>
                   </td>

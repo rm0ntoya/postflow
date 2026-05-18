@@ -9,7 +9,6 @@ interface AdminUser {
   hasGeminiKey: boolean;
   isAdmin: boolean;
   isBanned: boolean;
-  bannedReason?: string;
   carouselCount: number;
   createdAt: string;
 }
