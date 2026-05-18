@@ -4,24 +4,22 @@ import User from "@/models/User";
 import { getSessionUser } from "@/lib/auth";
 import { encryptApiKey, decryptApiKey } from "@/lib/encryption";
 
-const TEXT_MODELS = [
-  { id: "gemini-2.5-flash",             label: "Gemini 2.5 Flash",             tier: "free" },
-  { id: "gemini-2.5-flash-lite",        label: "Gemini 2.5 Flash-Lite",        tier: "free" },
-  { id: "gemini-2.5-pro",              label: "Gemini 2.5 Pro",               tier: "paid" },
-  { id: "gemini-3-flash-preview",       label: "Gemini 3 Flash (Preview)",     tier: "paid" },
-  { id: "gemini-3.1-flash-lite",        label: "Gemini 3.1 Flash-Lite",        tier: "paid" },
-  { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash-Lite Preview", tier: "paid" },
-  { id: "gemini-3.1-pro-preview",       label: "Gemini 3.1 Pro (Preview)",     tier: "paid" },
-  { id: "gemini-2.5-flash",             label: "Gemini 2.0 Flash (descontinuado)", tier: "free" },
+export const TEXT_MODELS = [
+  { id: "gemini-2.5-flash",          label: "Gemini 2.5 Flash",          tier: "free" },
+  { id: "gemini-2.5-flash-lite",     label: "Gemini 2.5 Flash-Lite",     tier: "free" },
+  { id: "gemini-2.5-pro",            label: "Gemini 2.5 Pro",            tier: "paid" },
+  { id: "gemini-3-flash-preview",    label: "Gemini 3 Flash (Preview)",  tier: "paid" },
+  { id: "gemini-3.1-flash-lite",     label: "Gemini 3.1 Flash-Lite",     tier: "paid" },
+  { id: "gemini-3.1-pro-preview",    label: "Gemini 3.1 Pro (Preview)",  tier: "paid" },
 ] as const;
 
-const IMAGE_MODELS = [
-  { id: "gemini-2.5-flash-image",         label: "Gemini 2.5 Flash Image",           tier: "free" },
-  { id: "gemini-3.1-flash-image-preview", label: "Gemini 3.1 Flash Image (Preview)", tier: "paid" },
-  { id: "gemini-3-pro-image-preview",     label: "Gemini 3 Pro Image (Preview)",     tier: "paid" },
-  { id: "imagen-4.0-fast-generate-001",   label: "Imagen 4 Fast",                    tier: "paid" },
-  { id: "imagen-4.0-generate-001",        label: "Imagen 4",                         tier: "paid" },
-  { id: "imagen-4.0-ultra-generate-001",  label: "Imagen 4 Ultra",                   tier: "paid" },
+export const IMAGE_MODELS = [
+  { id: "gemini-2.5-flash-image",         label: "Nano Banana (Gemini 2.5 Flash Image)",        tier: "free" },
+  { id: "gemini-3.1-flash-image-preview", label: "Nano Banana 2 (Gemini 3.1 Flash Image)",      tier: "paid" },
+  { id: "gemini-3-pro-image-preview",     label: "Nano Banana Pro (Gemini 3 Pro Image)",        tier: "paid" },
+  { id: "imagen-4.0-fast-generate-001",   label: "Imagen 4 Fast",                               tier: "paid" },
+  { id: "imagen-4.0-generate-001",        label: "Imagen 4",                                    tier: "paid" },
+  { id: "imagen-4.0-ultra-generate-001",  label: "Imagen 4 Ultra",                              tier: "paid" },
 ] as const;
 
 /** GET /api/user/api-key — returns masked status of stored key */

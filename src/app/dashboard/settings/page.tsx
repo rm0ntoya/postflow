@@ -51,6 +51,27 @@ export default function SettingsPage() {
   // API key state
   const [geminiKey, setGeminiKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
+  const [textModel, setTextModel] = useState("gemini-2.5-flash");
+  const [imageModel, setImageModel] = useState("gemini-2.5-flash-image");
+  const [savingModel, setSavingModel] = useState(false);
+
+  const TEXT_MODELS = [
+    { id: "gemini-2.5-flash",       label: "Gemini 2.5 Flash (Recomendado)" },
+    { id: "gemini-2.5-flash-lite",  label: "Gemini 2.5 Flash-Lite" },
+    { id: "gemini-2.5-pro",         label: "Gemini 2.5 Pro" },
+    { id: "gemini-3-flash-preview",  label: "Gemini 3 Flash (Preview)" },
+    { id: "gemini-3.1-flash-lite",  label: "Gemini 3.1 Flash-Lite" },
+    { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (Preview)" },
+  ];
+
+  const IMAGE_MODELS = [
+    { id: "gemini-2.5-flash-image",         label: "Nano Banana — Gemini 2.5 Flash Image (Recomendado)" },
+    { id: "gemini-3.1-flash-image-preview", label: "Nano Banana 2 — Gemini 3.1 Flash Image" },
+    { id: "gemini-3-pro-image-preview",     label: "Nano Banana Pro — Gemini 3 Pro Image" },
+    { id: "imagen-4.0-fast-generate-001",   label: "Imagen 4 Fast" },
+    { id: "imagen-4.0-generate-001",        label: "Imagen 4" },
+    { id: "imagen-4.0-ultra-generate-001",  label: "Imagen 4 Ultra" },
+  ];
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const faceInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +89,13 @@ export default function SettingsPage() {
         setName(d.name || "");
         setProfileAvatar(d.profileAvatarUrl || "");
         setFaceImages(d.faceReferenceImages || []);
+      })
+      .catch(() => {});
+    fetch("/api/user/api-key")
+      .then(r => r.json())
+      .then(d => {
+        if (d.textModel) setTextModel(d.textModel);
+        if (d.imageModel) setImageModel(d.imageModel);
       })
       .catch(() => {});
   }, []);
@@ -125,6 +153,21 @@ export default function SettingsPage() {
       else { const d = await res.json(); showToast(d.error || "Erro ao salvar chave."); }
     } finally {
       setSavingKey(false);
+    }
+  }
+
+  async function handleSaveModels() {
+    setSavingModel(true);
+    try {
+      const res = await fetch("/api/user/api-key", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textModel, imageModel }),
+      });
+      if (res.ok) showToast("Modelos salvos com sucesso.");
+      else { const d = await res.json(); showToast(d.error || "Erro ao salvar modelos."); }
+    } finally {
+      setSavingModel(false);
     }
   }
 
@@ -307,6 +350,33 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </SettingsRow>
+              <SettingsRow label="Modelo de Texto" helper="Usado para gerar o conteúdo dos carrosséis.">
+                <select
+                  value={textModel}
+                  onChange={e => setTextModel(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-base border border-border-subtle rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent"
+                >
+                  {TEXT_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </SettingsRow>
+              <SettingsRow label="Modelo de Imagem" helper="Usado para gerar imagens nos slides.">
+                <select
+                  value={imageModel}
+                  onChange={e => setImageModel(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-base border border-border-subtle rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent"
+                >
+                  {IMAGE_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </SettingsRow>
+              <div className="pt-4">
+                <Button variant="primary" size="md" onClick={handleSaveModels} loading={savingModel}>
+                  Salvar modelos
+                </Button>
+              </div>
             </div>
           </div>
         )}
