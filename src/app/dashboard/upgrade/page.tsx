@@ -108,8 +108,11 @@ export default function UpgradePage() {
         alert(data.error || "Erro ao criar checkout.");
         return;
       }
-      const url = data.checkoutUrl || data.sandboxUrl;
-      if (url) window.location.href = url;
+      if (!data.checkoutUrl) {
+        alert("Erro ao processar pagamento. Tente novamente.");
+        return;
+      }
+      window.location.href = data.checkoutUrl;
     } catch {
       alert("Erro de conexão. Tente novamente.");
     } finally {
