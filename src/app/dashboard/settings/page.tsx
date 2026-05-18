@@ -471,10 +471,10 @@ export default function SettingsPage() {
                       </SettingsRow>
                     )}
 
-                    <div className="pt-6 flex gap-3">
+                    <div className="pt-6 flex gap-3 flex-wrap">
                       <a href="/dashboard/upgrade">
                         <Button variant={isPro || isStudio ? "secondary" : "primary"} size="md">
-                          {isPro || isStudio ? "Ver planos" : "Fazer upgrade"}
+                          {isPro || isStudio ? "Ver planos" : isInTrial ? "Assinar agora" : "Fazer upgrade"}
                         </Button>
                       </a>
                       {(isPro || isStudio) && (
