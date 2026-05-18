@@ -35,7 +35,10 @@ export async function GET() {
       getAppConfig(),
     ]);
 
-    const mrrEstimated = (proUsers * (config.mpProPriceReais ?? 49)) + (studioUsers * (config.mpStudioPriceReais ?? 149));
+    // Hardcoded prices (BRL). Update these when Stripe pricing changes.
+    const proPriceReais = 49;      // Pro plan: R$ 49/month
+    const studioPriceReais = 149;  // Studio plan: R$ 149/month
+    const mrrEstimated = (proUsers * proPriceReais) + (studioUsers * studioPriceReais);
     const conversionRate = totalUsers > 0 ? Math.round(((proUsers + studioUsers) / totalUsers) * 100) : 0;
 
     return NextResponse.json({
