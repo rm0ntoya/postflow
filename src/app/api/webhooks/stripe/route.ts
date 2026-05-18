@@ -44,18 +44,23 @@ export async function POST(req: NextRequest) {
       }
 
       // Update user plan
-      const planExpiryDate = new Date();
-      planExpiryDate.setMonth(planExpiryDate.getMonth() + 1);
+      const planExpiresAt = new Date();
+      planExpiresAt.setMonth(planExpiresAt.getMonth() + 1);
 
-      await User.findByIdAndUpdate(
-        userId,
-        {
-          plan: planType,
-          planExpiryDate,
-          stripePaymentId: session.payment_intent,
-        },
-        { new: true }
-      );
+      if (session.payment_intent) {
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            plan: planType,
+            planExpiresAt,
+            stripePaymentId: session.payment_intent,
+          },
+          { new: true }
+        );
+      } else {
+        // No payment intent - don't save incomplete payment
+        console.warn("[webhook/stripe] No payment_intent in session", { userId, planType });
+      }
 
       // Record payment
       await Payment.findOneAndUpdate(
@@ -64,7 +69,9 @@ export async function POST(req: NextRequest) {
           userId,
           stripePaymentId: session.payment_intent,
           planType,
-          amountBRL: session.amount_total ? Math.round(session.amount_total / 100) : 0,
+          amountBRL: (session.amount_total && session.payment_intent)
+            ? Math.round(session.amount_total / 100)
+            : 0,
           status: "approved",
           createdAt: new Date(session.created * 1000),
         },
@@ -76,11 +83,18 @@ export async function POST(req: NextRequest) {
       // Handle subscription cancellation
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.userId;
-
-      if (userId) {
-        await User.findByIdAndUpdate(userId, { plan: "free" }, { new: true });
-        console.log(`[webhook/stripe] User ${userId} downgraded to free plan`);
+      if (!userId) {
+        console.error("[webhook/stripe] Subscription deletion without userId in metadata", {
+          subscriptionId: subscription.id,
+        });
+        return NextResponse.json(
+          { error: "Cannot process subscription deletion without userId" },
+          { status: 400 }
+        );
       }
+
+      await User.findByIdAndUpdate(userId, { plan: "free" }, { new: true });
+      console.log(`[webhook/stripe] User ${userId} downgraded to free plan`);
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
