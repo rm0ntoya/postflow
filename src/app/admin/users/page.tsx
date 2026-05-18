@@ -22,6 +22,7 @@ const thS: React.CSSProperties = { padding: "10px 16px", borderBottom: "1px soli
 export default function AdminUsersPage() {
   const [data, setData] = useState<ListResponse | null>(null);
   const [q, setQ] = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -29,7 +30,8 @@ export default function AdminUsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}&page=${page}`);
+      const params = new URLSearchParams({ q, page: String(page), plan: planFilter });
+      const res = await fetch(`/api/admin/users?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
     } catch (e) {
@@ -37,7 +39,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, page]);
+  }, [q, page, planFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -66,13 +68,25 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>Usuários</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, flexWrap: "wrap" as const }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, marginRight: "auto" }}>Usuários</h1>
+        <select
+          value={planFilter}
+          onChange={(e) => { setPlanFilter(e.target.value); setPage(1); }}
+          style={{ background: "#111", border: "1px solid #2a2a2a", color: "#fff", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none" }}
+        >
+          <option value="all">Todos os planos</option>
+          <option value="trial">Em trial</option>
+          <option value="pro">Pro ativo</option>
+          <option value="studio">Studio ativo</option>
+          <option value="expired">Expirados</option>
+          <option value="banned">Banidos</option>
+        </select>
         <input
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           placeholder="Buscar nome ou email..."
-          style={{ background: "#111", border: "1px solid #2a2a2a", color: "#fff", borderRadius: 8, padding: "8px 14px", fontSize: 14, width: 280, outline: "none" }}
+          style={{ background: "#111", border: "1px solid #2a2a2a", color: "#fff", borderRadius: 8, padding: "8px 14px", fontSize: 14, width: 260, outline: "none" }}
         />
       </div>
 
