@@ -49,7 +49,7 @@ export function TemplatePicker({ slide, slideIndex, totalSlides, accentColor, ha
   const activeCategory = CATEGORIES.find(c => c.key === tab)!;
 
   return (
-    <div className="flex flex-col" style={{ height: "100%" }}>
+    <div className="flex flex-col" style={{ height: "calc(100vh - 180px)" }}>
       {/* Tabs */}
       <div className="flex border-b border-border-subtle shrink-0">
         {CATEGORIES.map(cat => (
@@ -58,7 +58,7 @@ export function TemplatePicker({ slide, slideIndex, totalSlides, accentColor, ha
             onClick={() => setTab(cat.key)}
             className={`flex-1 py-2.5 text-caption font-medium transition-colors duration-150 ${
               tab === cat.key
-                ? "text-accent border-b-2 border-accent"
+                ? "text-accent border-b-2 border-accent -mb-px"
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
@@ -77,8 +77,14 @@ export function TemplatePicker({ slide, slideIndex, totalSlides, accentColor, ha
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="grid grid-cols-2 gap-3"
+            className={activeCategory.templates.length === 0 ? "" : "grid grid-cols-2 gap-3"}
           >
+            {activeCategory.templates.length === 0 && (
+              <div className="col-span-2 flex flex-col items-center justify-center py-12 text-text-tertiary gap-2">
+                <span className="text-2xl">✦</span>
+                <p className="text-caption">Nenhum modelo nesta categoria.</p>
+              </div>
+            )}
             {activeCategory.templates.map(template => (
               <button
                 key={template.id}

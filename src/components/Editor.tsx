@@ -976,7 +976,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
             ))}
           </div>
 
-          <div className="p-4">
+          <div className={propsTab === "modelos" ? "" : "p-4"}>
             {propsTab === "design" && el?.type === "text" && (
               <TextProps el={el} accentColor={accentColor} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)} />
             )}
@@ -999,16 +999,14 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
               <LayersList slide={slide} selected={selectedEl} onSelect={setSelectedEl} onDelete={(id) => deleteEl(selectedSlide, id)} />
             )}
             {propsTab === "modelos" && slide && (
-              <div className="-mx-4 -mt-4" style={{ height: "calc(100vh - 180px)" }}>
-                <TemplatePicker
-                  slide={slide}
-                  slideIndex={selectedSlide}
-                  totalSlides={draft.slides.length}
-                  accentColor={accentColor}
-                  handle={slide.elements.find(e => e.type === "profile")?.text || "@seuhandle"}
-                  onApply={applyTemplate}
-                />
-              </div>
+              <TemplatePicker
+                slide={slide}
+                slideIndex={selectedSlide}
+                totalSlides={draft.slides.length}
+                accentColor={accentColor}
+                handle={slide.elements.find(e => e.type === "profile")?.text || "@seuhandle"}
+                onApply={applyTemplate}
+              />
             )}
           </div>
         </aside>
