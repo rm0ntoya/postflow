@@ -17,6 +17,8 @@ import {
   BackgroundPropsPanel, SlidePropsPanel, LayersList,
   RegenImageModal, RegenOptions, AddSlideModal,
 } from "./EditorPanels";
+import { TemplatePicker } from "@/components/TemplatePicker";
+import { SlideTemplate, TemplateParams } from "@/lib/slideTemplates";
 
 type Draft = Omit<ICarousel, keyof import("mongoose").Document | "userId" | "createdAt">;
 
@@ -622,6 +624,31 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
     }
   };
 
+  const applyTemplate = (template: SlideTemplate) => {
+    if (!slide) return;
+    pushHistory();
+    const titleEl = slide.elements.find((e) => e.type === "text" && (e as any).fontSize && (e as any).fontSize > 60);
+    const bodyEl = slide.elements.find((e) => e.type === "text" && (e as any).fontSize && (e as any).fontSize <= 60 && (e as any).fontSize >= 28);
+    const profEl = slide.elements.find((e) => e.type === "profile");
+    const imageEl = slide.elements.find((e) => e.type === "image");
+    const params: TemplateParams = {
+      cid: draft._id || `c${Date.now()}`,
+      i: selectedSlide,
+      title: (titleEl?.text || "TÍTULO DO SLIDE").toUpperCase(),
+      body: bodyEl?.text || "Texto do corpo aqui.",
+      accentColor: accentColor,
+      handle: profEl?.text || "@seuhandle",
+      imagePrompt: (imageEl as any)?.imagePrompt || "",
+    };
+    const newElements = template.build(params);
+    setDraft(d => ({
+      ...d,
+      slides: d.slides.map((s, idx) => idx === selectedSlide ? { ...s, elements: newElements } : s),
+    }));
+    setSelectedEl(null);
+    showToast(`Modelo "${template.name}" aplicado.`);
+  };
+
   const accentColor = draft.accentColor || "#FFD700";
 
   const slideLabel = (idx: number) =>
@@ -934,7 +961,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
         {/* INSPECTOR */}
         <aside style={{ gridArea: "inspector" }} className="bg-bg-surface border-l border-border-subtle overflow-y-auto">
           <div className="flex border-b border-border-subtle">
-            {["design", "background", "layers"].map((tab) => (
+            {["design", "background", "layers", "modelos"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setPropsTab(tab)}
@@ -944,7 +971,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
                     : "text-text-secondary hover:text-text-primary"
                 }`}
               >
-                {tab === "design" ? "Design" : tab === "background" ? "Fundo" : "Camadas"}
+                {tab === "design" ? "Design" : tab === "background" ? "Fundo" : tab === "layers" ? "Camadas" : "Modelos"}
               </button>
             ))}
           </div>
@@ -970,6 +997,18 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
             )}
             {propsTab === "layers" && slide && (
               <LayersList slide={slide} selected={selectedEl} onSelect={setSelectedEl} onDelete={(id) => deleteEl(selectedSlide, id)} />
+            )}
+            {propsTab === "modelos" && slide && (
+              <div className="-mx-4 -mt-4" style={{ height: "calc(100vh - 180px)" }}>
+                <TemplatePicker
+                  slide={slide}
+                  slideIndex={selectedSlide}
+                  totalSlides={draft.slides.length}
+                  accentColor={accentColor}
+                  handle={slide.elements.find(e => e.type === "profile")?.text || "@seuhandle"}
+                  onApply={applyTemplate}
+                />
+              </div>
             )}
           </div>
         </aside>
