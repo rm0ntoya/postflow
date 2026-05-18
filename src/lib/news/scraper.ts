@@ -17,19 +17,32 @@ const SOURCES = [
   { name: 'Metrópoles', fn: scrapeMetropoles },
 ];
 
+// Wraps scraper with timeout so one slow portal doesn't block all
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout ${ms}ms`)), ms)),
+  ]);
+}
+
 async function runScraper(name: string, fn: () => Promise<RawArticle[]>) {
   let inserted = 0, skipped = 0, errors = 0;
   try {
-    const articles = await fn();
-    for (const article of articles) {
-      try {
-        const result = await insertArticle(article);
-        if (result === 'inserted') inserted++;
+    // 8s timeout per portal, max 10 articles each
+    const all = await withTimeout(fn(), 8000);
+    const articles = all.slice(0, 10);
+    // Insert in parallel (no sequential await)
+    const results = await Promise.allSettled(articles.map(a => insertArticle(a)));
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        if (r.value === 'inserted') inserted++;
         else skipped++;
-      } catch { errors++; }
+      } else {
+        errors++;
+      }
     }
   } catch (err) {
-    console.error(`[SCRAPER] Falha em ${name}:`, err);
+    console.error(`[SCRAPER] Falha em ${name}:`, err instanceof Error ? err.message : err);
     errors++;
   }
   console.log(`[${name}] inseridas=${inserted} ignoradas=${skipped} erros=${errors}`);
@@ -38,8 +51,9 @@ async function runScraper(name: string, fn: () => Promise<RawArticle[]>) {
 
 export async function runAllScrapers() {
   const start = Date.now();
-  console.log('[SCRAPER] Iniciando coleta...');
+  console.log('[SCRAPER] Iniciando coleta paralela...');
 
+  // All scrapers run in parallel
   const results = await Promise.allSettled(
     SOURCES.map(({ name, fn }) => runScraper(name, fn))
   );
@@ -53,9 +67,16 @@ export async function runAllScrapers() {
     return acc;
   }, { inserted: 0, skipped: 0, errors: 0 });
 
-  await cleanOldArticles(7);
+  await cleanOldArticles(7).catch(() => null);
 
   const duration_ms = Date.now() - start;
   console.log(`[SCRAPER] Concluído em ${duration_ms}ms — inseridas=${totals.inserted}`);
   return { ...totals, duration_ms };
+}
+
+// Scrape single source by name
+export async function runSingleScraper(sourceName: string) {
+  const source = SOURCES.find(s => s.name.toLowerCase() === sourceName.toLowerCase());
+  if (!source) throw new Error(`Source not found: ${sourceName}`);
+  return runScraper(source.name, source.fn);
 }
