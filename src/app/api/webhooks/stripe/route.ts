@@ -5,9 +5,18 @@ import User from "@/models/User";
 import Payment from "@/models/Payment";
 import AppConfig from "@/models/AppConfig";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
-
 export async function POST(req: NextRequest) {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    console.error("[webhook/stripe] STRIPE_SECRET_KEY env var not configured");
+    return NextResponse.json(
+      { error: "Stripe not configured" },
+      { status: 503 }
+    );
+  }
+
+  const stripe = new Stripe(stripeSecretKey);
+
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
