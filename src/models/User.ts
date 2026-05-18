@@ -38,7 +38,9 @@ export interface IUser extends Document {
   isBanned: boolean;
   bannedReason?: string;
   bannedAt?: Date;
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "studio";
+  carouselsThisMonth: number;
+  usageResetAt: Date;
   mpPaymentId?: string;
   planExpiresAt?: Date;
   trialEndsAt?: Date;
@@ -71,7 +73,9 @@ const UserSchema = new Schema<IUser>(
     isBanned: { type: Boolean, default: false },
     bannedReason: { type: String },
     bannedAt: { type: Date },
-    plan: { type: String, enum: ["free", "pro"], default: "free" },
+    plan: { type: String, enum: ["free", "pro", "studio"], default: "free" },
+    carouselsThisMonth: { type: Number, default: 0 },
+    usageResetAt: { type: Date, default: () => new Date() },
     mpPaymentId: { type: String },
     planExpiresAt: { type: Date },
     trialEndsAt: { type: Date },
