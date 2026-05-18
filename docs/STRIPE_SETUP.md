@@ -81,12 +81,23 @@ Endpoint: `POST /api/webhooks/stripe`
 The webhook reads `stripeWebhookSecret` from the database (`AppConfig` collection),
 so the signing secret must be saved via the admin panel — not as an env var.
 
-## Environment Variables Required
+## Environment Variables
+
+- `STRIPE_SECRET_KEY` — Required in production. Set via deployment platform (Vercel env vars, Docker secrets, etc.).
+  - Used by webhook handler (`/api/webhooks/stripe`) to verify Stripe signatures
+  - Deploy process must set this before production
+- Other keys (publishable, price IDs, webhook secret) are configured via admin panel and stored in database
 
 ```env
 STRIPE_SECRET_KEY=sk_test_...   # fallback only; admin panel key takes precedence
 NEXT_PUBLIC_URL=https://yourdomain.com
 ```
+
+## Configuration Flow
+
+1. **Checkout flow**: Reads keys from database (AppConfig) via admin panel
+2. **Webhook handler**: Reads signing key from environment variable (set at deploy time)
+3. **Admin panel**: Stores payment-provider-specific configs in database
 
 ## Testing Webhook Delivery Locally
 
