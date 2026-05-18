@@ -30,9 +30,17 @@ export async function POST(req: NextRequest) {
   };
 
   const priceId = priceIdMap[planType];
-  if (!priceId) {
+  if (!priceId?.trim()) {
     return NextResponse.json(
       { error: `Preço não configurado para plano '${planType}'` },
+      { status: 503 }
+    );
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_URL;
+  if (!baseUrl) {
+    return NextResponse.json(
+      { error: "Configuração faltando: NEXT_PUBLIC_URL" },
       { status: 503 }
     );
   }
@@ -52,14 +60,21 @@ export async function POST(req: NextRequest) {
         userId: session.userId,
         planType,
       },
-      success_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/upgrade?status=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/upgrade?status=cancelled`,
+      success_url: `${baseUrl}/dashboard/upgrade?status=success`,
+      cancel_url: `${baseUrl}/dashboard/upgrade?status=cancelled`,
     });
 
     return NextResponse.json({ checkoutUrl: checkoutSession.url }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro desconhecido";
-    console.error("[checkout/create] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[checkout/create] Payment error:", {
+      userId: session.userId,
+      planType,
+      error: message,
+    });
+    return NextResponse.json(
+      { error: "Erro ao processar pagamento. Tente novamente." },
+      { status: 500 }
+    );
   }
 }
