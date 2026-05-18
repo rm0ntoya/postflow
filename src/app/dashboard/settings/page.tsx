@@ -1,148 +1,134 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Menu, Lock, Key, CreditCard, Palette, Keyboard, Trash2 } from "lucide-react";
+import { Menu, Lock, Key, CreditCard, Palette, Keyboard, Trash2, Camera, User, Plus, X } from "lucide-react";
 
 type Section = "perfil" | "conta" | "api" | "plano" | "aparencia" | "atalhos";
 
-/* Settings Switch Component */
-interface SettingsSwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}
-
-function SettingsSwitch({ checked, onChange, disabled = false }: SettingsSwitchProps) {
-  return (
-    <button
-      onClick={() => !disabled && onChange(!checked)}
-      disabled={disabled}
-      className={`relative h-6 w-11 rounded-full transition-colors duration-fast ${
-        checked ? "bg-accent" : "bg-bg-surface-2 border border-border"
-      } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-      role="switch"
-      aria-checked={checked}
-    >
-      <div
-        className={`absolute top-1 h-4 w-4 rounded-full bg-bg-base transition-transform duration-fast ${
-          checked ? "right-1" : "left-1"
-        }`}
-      />
-    </button>
-  );
-}
-
-/* Settings Row Component */
-interface SettingsRowProps {
-  label: string;
-  helper?: string;
-  children: React.ReactNode;
-}
-
-function SettingsRow({ label, helper, children }: SettingsRowProps) {
+function SettingsRow({ label, helper, children }: { label: string; helper?: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-8 items-start py-5 border-b border-border-subtle last:border-0">
       <div className="flex-[0_0_280px]">
         <div className="text-body font-medium text-text-primary mb-1">{label}</div>
         {helper && <div className="text-caption text-text-tertiary">{helper}</div>}
       </div>
-      <div className="flex-1 pt-1">
-        {children}
-      </div>
+      <div className="flex-1 pt-1">{children}</div>
     </div>
   );
 }
 
-/* Shortcuts Table */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 const KEYBOARD_SHORTCUTS = [
   { action: "Abrir Paleta de Comandos", shortcut: "⌘K" },
-  { action: "Ir para Dashboard", shortcut: "g d" },
-  { action: "Ir para Modo Notícia", shortcut: "g n" },
-  { action: "Ir para Calendário", shortcut: "g c" },
-  { action: "Ir para Contexto", shortcut: "g x" },
-  { action: "Criar novo carrossel", shortcut: "c" },
-  { action: "Mostrar atalhos", shortcut: "?" },
-  { action: "Buscar local", shortcut: "/" },
+  { action: "Novo carrossel", shortcut: "C" },
+  { action: "Ir para Dashboard", shortcut: "G D" },
+  { action: "Ir para Notícias", shortcut: "G N" },
+  { action: "Ir para Notícia PRO", shortcut: "G P" },
+  { action: "Ir para Calendário", shortcut: "G C" },
+  { action: "Ir para Configurações", shortcut: "G S" },
 ];
 
-function ShortcutsTable() {
-  return (
-    <div className="border border-border-subtle rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border-subtle bg-bg-surface-2">
-            <th className="px-5 py-4 text-left text-caption font-medium text-text-secondary">
-              Ação
-            </th>
-            <th className="px-5 py-4 text-right text-caption font-medium text-text-secondary">
-              Atalho
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {KEYBOARD_SHORTCUTS.map((item, idx) => (
-            <tr key={idx} className="border-b border-border-subtle last:border-0 hover:bg-bg-surface-2">
-              <td className="px-5 py-4 text-body text-text-primary">{item.action}</td>
-              <td className="px-5 py-4 text-right">
-                <code className="inline-block px-2 py-1 rounded bg-bg-surface-3 border border-border text-caption text-text-secondary font-mono">
-                  {item.shortcut}
-                </code>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/* Main Settings Page */
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>("perfil");
-  const [formState, setFormState] = useState({
-    nome: "Ruan Pablo",
-    email: "ruan@example.com",
-    geminiKey: "",
-    denseMode: false,
-    reduceMotion: false,
-  });
-  const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>({});
-  const [savedMessage, setSavedMessage] = useState("");
+  const [toast, setToast] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const isDirty = Object.values(dirtyFields).some(Boolean);
+  // Profile state
+  const [name, setName] = useState("");
+  const [profileAvatar, setProfileAvatar] = useState<string>("");
+  const [faceImages, setFaceImages] = useState<string[]>([]);
 
-  const handleFieldChange = useCallback(
-    (fieldName: string, value: string | boolean) => {
-      setFormState((prev) => ({ ...prev, [fieldName]: value }));
-      setDirtyFields((prev) => ({ ...prev, [fieldName]: true }));
-      setSavedMessage("");
-    },
-    []
-  );
+  // API key state
+  const [geminiKey, setGeminiKey] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
 
-  const handleSave = async () => {
-    console.log("Saving form state:", formState);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSavedMessage("Configurações salvas com sucesso");
-    setDirtyFields({});
-    setTimeout(() => setSavedMessage(""), 3000);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const faceInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
   };
 
-  const handleDiscard = () => {
-    setFormState({
-      nome: "Ruan Pablo",
-      email: "ruan@example.com",
-      geminiKey: "",
-      denseMode: false,
-      reduceMotion: false,
-    });
-    setDirtyFields({});
-    setSavedMessage("");
-  };
+  // Load profile on mount
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then(r => r.json())
+      .then(d => {
+        setName(d.name || "");
+        setProfileAvatar(d.profileAvatarUrl || "");
+        setFaceImages(d.faceReferenceImages || []);
+      })
+      .catch(() => {});
+  }, []);
 
-  const SECTIONS: { id: Section; label: string; icon: any }[] = [
+  async function handleSaveProfile() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, profileAvatarUrl: profileAvatar, faceReferenceImages: faceImages }),
+      });
+      if (res.ok) showToast("Perfil salvo com sucesso.");
+      else showToast("Erro ao salvar perfil.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast("Foto muito grande. Máximo 2MB."); return; }
+    const b64 = await fileToBase64(file);
+    setProfileAvatar(b64);
+  }
+
+  async function handleFaceUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (faceImages.length >= 4) { showToast("Máximo 4 fotos de rosto."); return; }
+    const remaining = 4 - faceImages.length;
+    const toProcess = files.slice(0, remaining);
+    const converted = await Promise.all(
+      toProcess.filter(f => f.size <= 2 * 1024 * 1024).map(f => fileToBase64(f))
+    );
+    setFaceImages(prev => [...prev, ...converted].slice(0, 4));
+    if (faceInputRef.current) faceInputRef.current.value = "";
+  }
+
+  function removeFaceImage(idx: number) {
+    setFaceImages(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  async function handleSaveGeminiKey() {
+    if (!geminiKey.trim()) return;
+    setSavingKey(true);
+    try {
+      const res = await fetch("/api/user/api-key", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geminiApiKey: geminiKey.trim() }),
+      });
+      if (res.ok) { showToast("Chave API salva com sucesso."); setGeminiKey(""); }
+      else { const d = await res.json(); showToast(d.error || "Erro ao salvar chave."); }
+    } finally {
+      setSavingKey(false);
+    }
+  }
+
+  const SECTIONS: { id: Section; label: string; icon: React.ElementType }[] = [
     { id: "perfil", label: "Perfil", icon: Menu },
     { id: "conta", label: "Conta", icon: Lock },
     { id: "api", label: "API & Integrações", icon: Key },
@@ -153,207 +139,238 @@ export default function SettingsPage() {
 
   return (
     <div className="flex gap-8 p-8 pb-40">
-      {/* Left Sidebar */}
+      {/* Sidebar */}
       <div className="flex-[0_0_220px] sticky top-12">
         <nav className="flex flex-col gap-1">
-          {SECTIONS.map((section) => (
+          {SECTIONS.map(section => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
               className={`px-4 py-3 rounded-sm text-left text-body transition-colors duration-fast flex items-center gap-3 relative ${
                 activeSection === section.id
-                  ? "text-accent bg-accent-muted"
-                  : "text-text-secondary hover:text-text-primary hover:bg-bg-surface-2"
+                  ? "bg-bg-surface text-text-primary font-medium"
+                  : "text-text-secondary hover:text-text-primary hover:bg-bg-surface"
               }`}
             >
+              {activeSection === section.id && (
+                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-full" />
+              )}
               <section.icon size={18} className="flex-shrink-0" />
               <span>{section.label}</span>
-              {activeSection === section.id && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent" />
-              )}
             </button>
           ))}
         </nav>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 max-w-2xl">
-        {/* Perfil Section */}
+      {/* Content */}
+      <div className="flex-1 max-w-2xl space-y-6">
+
+        {/* PERFIL */}
         {activeSection === "perfil" && (
-          <div>
-            <h2 className="text-h2 text-text-primary mb-8">Perfil</h2>
+          <div className="space-y-6">
+            <h2 className="text-h2 text-text-primary">Perfil</h2>
+
+            {/* Foto de perfil + Nome */}
             <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
+              <SettingsRow label="Foto de perfil" helper="Aparece nos slides como foto do criador.">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-bg-surface-2 border-2 border-border-subtle overflow-hidden flex items-center justify-center">
+                      {profileAvatar
+                        ? <img src={profileAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                        : <User size={28} className="text-text-tertiary" />
+                      }
+                    </div>
+                    <button
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent flex items-center justify-center hover:bg-accent-hover transition-colors"
+                    >
+                      <Camera size={12} className="text-text-inverse" />
+                    </button>
+                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                  </div>
+                  <div className="space-y-1">
+                    <Button variant="secondary" size="sm" onClick={() => avatarInputRef.current?.click()}>
+                      Trocar foto
+                    </Button>
+                    {profileAvatar && (
+                      <button onClick={() => setProfileAvatar("")} className="block text-caption text-text-tertiary hover:text-red-400 transition-colors">
+                        Remover foto
+                      </button>
+                    )}
+                    <p className="text-caption text-text-tertiary">JPG, PNG ou WebP. Máx 2MB.</p>
+                  </div>
+                </div>
+              </SettingsRow>
+
               <SettingsRow label="Nome completo">
                 <Input
                   type="text"
-                  value={formState.nome}
-                  onChange={(e) => handleFieldChange("nome", e.target.value)}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   inputSize="lg"
                   placeholder="Seu nome"
                 />
               </SettingsRow>
-              <SettingsRow label="E-mail" helper="O endereço associado à sua conta">
-                <Input
-                  type="email"
-                  value={formState.email}
-                  onChange={(e) => handleFieldChange("email", e.target.value)}
-                  inputSize="lg"
-                  placeholder="seu@email.com"
-                />
-              </SettingsRow>
+            </div>
+
+            {/* Referências de Rosto */}
+            <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
+              <div className="mb-6">
+                <h3 className="text-body-strong text-text-primary mb-1">Referências de Rosto</h3>
+                <p className="text-body text-text-secondary">
+                  Envie até 4 fotos do seu rosto. Ao gerar carrosséis com IA, você pode ativar o uso do seu rosto nas imagens geradas — slide a slide.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mb-4">
+                {faceImages.map((img, idx) => (
+                  <div key={idx} className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-border-subtle group">
+                    <img src={img} alt={`Rosto ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeFaceImage(idx)}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <X size={20} className="text-white" />
+                    </button>
+                    <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                      <span className="text-[10px] text-white font-bold">{idx + 1}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {faceImages.length < 4 && (
+                  <button
+                    onClick={() => faceInputRef.current?.click()}
+                    className="w-24 h-24 rounded-xl border-2 border-dashed border-border-subtle hover:border-accent hover:text-accent text-text-tertiary transition-colors flex flex-col items-center justify-center gap-1"
+                  >
+                    <Plus size={20} />
+                    <span className="text-micro">Adicionar</span>
+                  </button>
+                )}
+                <input ref={faceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFaceUpload} />
+              </div>
+
+              <p className="text-caption text-text-tertiary">
+                {faceImages.length}/4 fotos · Use fotos com rosto visível e boa iluminação para melhores resultados.
+              </p>
+            </div>
+
+            {/* Save button */}
+            <div className="flex justify-end">
+              <Button variant="primary" size="lg" onClick={handleSaveProfile} loading={saving}>
+                Salvar perfil
+              </Button>
             </div>
           </div>
         )}
 
-        {/* Conta Section */}
+        {/* CONTA */}
         {activeSection === "conta" && (
           <div>
             <h2 className="text-h2 text-text-primary mb-8">Conta</h2>
             <div className="bg-bg-surface border border-border-subtle rounded-lg p-8 space-y-5">
               <div className="flex items-center justify-between py-4 border-b border-border-subtle">
                 <div>
-                  <div className="text-body font-medium text-text-primary mb-1">
-                    Alterar senha
-                  </div>
-                  <div className="text-caption text-text-tertiary">
-                    Atualize sua senha regularmente por segurança
-                  </div>
+                  <div className="text-body font-medium text-text-primary mb-1">Alterar senha</div>
+                  <div className="text-caption text-text-tertiary">Atualize sua senha regularmente por segurança</div>
                 </div>
-                <Button variant="secondary" size="md" iconLeft={<Lock size={16} />}>
-                  Alterar senha
-                </Button>
+                <Button variant="secondary" size="md" iconLeft={<Lock size={16} />}>Alterar senha</Button>
               </div>
               <div className="flex items-center justify-between py-4">
                 <div>
-                  <div className="text-body font-medium text-text-primary mb-1">
-                    Excluir conta
-                  </div>
-                  <div className="text-caption text-text-tertiary">
-                    Isso não pode ser desfeito
-                  </div>
+                  <div className="text-body font-medium text-text-primary mb-1">Excluir conta</div>
+                  <div className="text-caption text-text-tertiary">Isso não pode ser desfeito</div>
                 </div>
-                <Button variant="danger" size="md" iconLeft={<Trash2 size={16} />}>
-                  Excluir
-                </Button>
+                <Button variant="danger" size="md" iconLeft={<Trash2 size={16} />}>Excluir</Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* API & Integrações Section */}
+        {/* API */}
         {activeSection === "api" && (
-          <div>
-            <h2 className="text-h2 text-text-primary mb-8">API & Integrações</h2>
+          <div className="space-y-6">
+            <h2 className="text-h2 text-text-primary">API & Integrações</h2>
             <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
-              <SettingsRow
-                label="Chave API Gemini"
-                helper="Mantida privada. Usada apenas em seu navegador."
-              >
-                <Input
-                  type="password"
-                  value={formState.geminiKey}
-                  onChange={(e) => handleFieldChange("geminiKey", e.target.value)}
-                  inputSize="lg"
-                  placeholder="Sua chave API Gemini"
-                />
+              <SettingsRow label="Chave API Gemini" helper="Salva de forma encriptada. Nunca exposta.">
+                <div className="space-y-3">
+                  <Input
+                    type="password"
+                    value={geminiKey}
+                    onChange={e => setGeminiKey(e.target.value)}
+                    inputSize="lg"
+                    placeholder="AIza..."
+                  />
+                  <Button variant="primary" size="md" onClick={handleSaveGeminiKey} loading={savingKey} disabled={!geminiKey.trim()}>
+                    Salvar chave
+                  </Button>
+                </div>
               </SettingsRow>
             </div>
           </div>
         )}
 
-        {/* Plano & Cobrança Section */}
+        {/* PLANO */}
         {activeSection === "plano" && (
           <div>
             <h2 className="text-h2 text-text-primary mb-8">Plano & Cobrança</h2>
             <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
               <div className="flex items-center justify-between py-6">
                 <div>
-                  <div className="text-body font-medium text-text-primary mb-1">
-                    Plano atual
-                  </div>
-                  <div className="text-caption text-text-secondary">
-                    Você está no plano <strong>Gratuito</strong>
-                  </div>
+                  <div className="text-body font-medium text-text-primary mb-1">Gerenciar plano</div>
+                  <div className="text-caption text-text-secondary">Ver detalhes e upgrade</div>
                 </div>
-                <Button variant="primary" size="md">
-                  Fazer upgrade
-                </Button>
+                <a href="/dashboard/upgrade">
+                  <Button variant="secondary" size="md">Ver planos</Button>
+                </a>
               </div>
             </div>
           </div>
         )}
 
-        {/* Aparência Section */}
+        {/* APARÊNCIA */}
         {activeSection === "aparencia" && (
           <div>
             <h2 className="text-h2 text-text-primary mb-8">Aparência</h2>
             <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
-              <SettingsRow label="Tema" helper="Selecione como a interface aparece">
-                <div className="text-body text-text-secondary">
-                  Escuro
-                  <span className="ml-2 inline-block px-2 py-1 rounded bg-bg-surface-2 border border-border text-caption">
-                    Em breve: Modo claro
-                  </span>
-                </div>
-              </SettingsRow>
-              <SettingsRow label="Densidade compacta" helper="Reduz espaçamento na interface">
-                <SettingsSwitch
-                  checked={formState.denseMode}
-                  onChange={(value) => handleFieldChange("denseMode", value)}
-                />
-              </SettingsRow>
-              <SettingsRow label="Reduzir motion" helper="Desativa animações para maior conforto">
-                <SettingsSwitch
-                  checked={formState.reduceMotion}
-                  onChange={(value) => handleFieldChange("reduceMotion", value)}
-                />
-              </SettingsRow>
+              <p className="text-body text-text-tertiary">Opções de tema em breve.</p>
             </div>
           </div>
         )}
 
-        {/* Atalhos Section */}
+        {/* ATALHOS */}
         {activeSection === "atalhos" && (
           <div>
-            <h2 className="text-h2 text-text-primary mb-8">Atalhos de teclado</h2>
-            <div>
-              <ShortcutsTable />
+            <h2 className="text-h2 text-text-primary mb-8">Atalhos de Teclado</h2>
+            <div className="bg-bg-surface border border-border-subtle rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="border-b border-border-subtle">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-micro text-text-tertiary">Ação</th>
+                    <th className="px-6 py-3 text-right text-micro text-text-tertiary">Atalho</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {KEYBOARD_SHORTCUTS.map((item, i) => (
+                    <tr key={i} className="border-b border-border-subtle last:border-0 hover:bg-bg-surface-2 transition-colors">
+                      <td className="px-6 py-4 text-body text-text-primary">{item.action}</td>
+                      <td className="px-6 py-4 text-right">
+                        <kbd className="px-2 py-1 text-caption text-text-secondary bg-bg-base border border-border-subtle rounded font-mono">{item.shortcut}</kbd>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer Bar for Dirty State */}
-      {isDirty && (
-        <div className="fixed bottom-0 right-0 left-0 bg-bg-base border-t border-border-subtle">
-          <div className="flex items-center justify-between px-8 py-4 max-w-[calc(100%-220px)] ml-auto">
-            <div className="flex-1">
-              <div className="text-body-strong text-text-primary">
-                Você tem alterações não salvas
-              </div>
-              {savedMessage && (
-                <div className="text-caption text-state-success mt-1">
-                  {savedMessage}
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="ghost"
-                size="md"
-                onClick={handleDiscard}
-              >
-                Descartar
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleSave}
-              >
-                Salvar
-              </Button>
-            </div>
-          </div>
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-bg-surface border border-border-subtle rounded-xl px-5 py-3 text-body text-text-primary shadow-xl">
+          {toast}
         </div>
       )}
     </div>

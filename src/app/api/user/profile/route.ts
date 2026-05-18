@@ -9,10 +9,11 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
     await connectDB();
-    const user = await User.findById(session.userId).select("+faceReferenceImages brandAccentColor profileAvatarUrl colorPalettes");
+    const user = await User.findById(session.userId).select("+faceReferenceImages name brandAccentColor profileAvatarUrl colorPalettes");
     if (!user) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
 
     return NextResponse.json({
+      name: user.name || "",
       brandAccentColor: user.brandAccentColor || "#FFD700",
       colorPalettes: user.colorPalettes || [],
       faceReferenceImages: user.faceReferenceImages || [],
@@ -32,22 +33,27 @@ export async function PUT(req: NextRequest) {
   let brandAccentColor: string | undefined;
   let faceReferenceImages: string[] | undefined;
   let profileAvatarUrl: string | undefined;
+  let name: string | undefined;
 
   try {
     const body = await req.json();
     brandAccentColor = body.brandAccentColor;
     faceReferenceImages = body.faceReferenceImages;
     profileAvatarUrl = body.profileAvatarUrl;
+    name = body.name;
   } catch {
     return NextResponse.json({ error: "Body JSON inválido." }, { status: 400 });
   }
 
   const update: Record<string, unknown> = {};
+  if (typeof name === "string" && name.trim()) {
+    update.name = name.trim();
+  }
   if (brandAccentColor && /^#[0-9A-Fa-f]{6}$/.test(brandAccentColor)) {
     update.brandAccentColor = brandAccentColor;
   }
   if (Array.isArray(faceReferenceImages)) {
-    update.faceReferenceImages = faceReferenceImages.slice(0, 3);
+    update.faceReferenceImages = faceReferenceImages.slice(0, 4);
   }
   if (typeof profileAvatarUrl === "string") {
     update.profileAvatarUrl = profileAvatarUrl;

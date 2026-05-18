@@ -54,6 +54,7 @@ export interface ICarousel extends Document {
   accentColor?: string;
   viral?: boolean;
   imageSlides?: number[];
+  faceSlides?: number[];
   slides: ISlide[];
   status: "draft" | "ready" | "published" | "generating" | "error";
   errorMessage?: string;
@@ -125,6 +126,7 @@ const CarouselSchema = new Schema<ICarousel>(
     accentColor: { type: String, default: "#FFD700" },
     viral: { type: Boolean, default: true },
     imageSlides: [Number],
+    faceSlides: { type: [Number], default: [] },
     slides: [SlideSchema],
     status: {
       type: String,

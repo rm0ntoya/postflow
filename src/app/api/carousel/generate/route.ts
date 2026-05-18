@@ -218,7 +218,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   let theme: string, slideCount: number, tone: string, detail: string;
-  let viral: boolean, imageSlides: number[], accentColor: string;
+  let viral: boolean, imageSlides: number[], faceSlides: number[], accentColor: string;
   let pasteContent: string | undefined, modeDebate: boolean, paletteColors: string[] | undefined;
 
   try {
@@ -230,6 +230,7 @@ export async function POST(req: NextRequest) {
     viral = body.viral !== false;
     modeDebate = body.modeDebate === true;
     imageSlides = Array.isArray(body.imageSlides) ? body.imageSlides : [];
+    faceSlides = Array.isArray(body.faceSlides) ? body.faceSlides : [];
     accentColor = /^#[0-9A-Fa-f]{6}$/.test(body.accentColor || "") ? body.accentColor : "#FFD700";
     pasteContent = typeof body.pasteContent === "string" && body.pasteContent.trim() ? body.pasteContent.trim() : undefined;
     paletteColors = Array.isArray(body.paletteColors) ? body.paletteColors.filter((c: unknown) => typeof c === "string" && /^#[0-9A-Fa-f]{6}$/.test(c as string)) : undefined;
@@ -277,6 +278,7 @@ export async function POST(req: NextRequest) {
     accentColor: resolvedAccent,
     viral,
     imageSlides,
+    faceSlides,
   });
 
   try {
@@ -321,6 +323,7 @@ export async function POST(req: NextRequest) {
         accentColor: carousel.accentColor,
         viral: carousel.viral,
         imageSlides: carousel.imageSlides,
+        faceSlides: carousel.faceSlides,
         fontPair: carousel.fontPair,
         slides: carousel.slides,
         createdAt: carousel.createdAt,

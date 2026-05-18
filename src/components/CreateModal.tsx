@@ -29,6 +29,7 @@ export interface GenerateSettings {
   viral: boolean;
   modeDebate: boolean;
   imageSlides: number[];
+  faceSlides: number[];
   accentColor: string;
   paletteColors?: string[];
   paletteId?: string;
@@ -59,9 +60,15 @@ export default function CreateModal(props: CreateModalProps) {
   const [slides, setSlides] = React.useState(7);
   const [accent, setAccent] = React.useState(ACCENTS[0]);
   const [aiImages, setAiImages] = React.useState(true);
+  const [faceSlides, setFaceSlides] = React.useState<number[]>([]);
+  const [hasFaceImages, setHasFaceImages] = React.useState(false);
   const [genStep, setGenStep] = React.useState<number | null>(null);
 
-  const reset = () => { setStep(1); setTheme(prefill?.theme || ""); setGenStep(null); };
+  React.useEffect(() => {
+    fetch("/api/user/profile").then(r => r.json()).then(d => setHasFaceImages(!!d.hasFaceImages)).catch(() => {});
+  }, []);
+
+  const reset = () => { setStep(1); setTheme(prefill?.theme || ""); setGenStep(null); setFaceSlides([]); };
 
   async function submit() {
     // Legacy path: delegate to parent.
@@ -75,6 +82,7 @@ export default function CreateModal(props: CreateModalProps) {
         viral: true,
         modeDebate: false,
         imageSlides,
+        faceSlides,
         accentColor: accent,
         useFace: false,
       });
@@ -86,7 +94,7 @@ export default function CreateModal(props: CreateModalProps) {
       const res = await fetch("/api/carousel/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme, tone, slides, accent, aiImages, useBrand }),
+        body: JSON.stringify({ theme, tone, slides, accent, aiImages, useBrand, faceSlides }),
       });
       for (let i = 1; i <= 4; i++) { await wait(700); setGenStep(i); }
       const data = await res.json().catch(() => ({}));
@@ -174,6 +182,40 @@ export default function CreateModal(props: CreateModalProps) {
                 <Switch checked={aiImages} onChange={setAiImages} />
                 <span className="text-body text-text-secondary">Gerar imagens com IA</span>
               </label>
+              {hasFaceImages && aiImages && (
+                <div className="pt-2">
+                  <div className="text-caption text-text-secondary mb-2">Usar meu rosto nas imagens</div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {Array.from({ length: slides }, (_, i) => {
+                      const hasFace = faceSlides.includes(i);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const next = hasFace
+                              ? faceSlides.filter(s => s !== i)
+                              : [...faceSlides, i];
+                            setFaceSlides(next);
+                          }}
+                          className={cn(
+                            "py-1.5 px-2 rounded-md border text-caption transition-all",
+                            hasFace
+                              ? "border-accent bg-accent/10 text-accent"
+                              : "border-border-subtle text-text-tertiary hover:border-border"
+                          )}
+                        >
+                          {hasFace ? "😊" : "🖼️"} {i + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => setFaceSlides(Array.from({ length: slides }, (_, i) => i))} className="text-caption text-accent hover:underline">Todos</button>
+                    <span className="text-caption text-text-tertiary">·</span>
+                    <button onClick={() => setFaceSlides([])} className="text-caption text-text-tertiary hover:underline">Nenhum</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

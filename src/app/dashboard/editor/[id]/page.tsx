@@ -70,9 +70,12 @@ export default function EditorPage() {
           const res = await fetch(`/api/carousel/${id}/generate-image`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               slideIndex: item.slideIndex,
-              elementId: item.elementId 
+              elementId: item.elementId,
+              useFace: Array.isArray((carousel as any).faceSlides)
+                ? (carousel as any).faceSlides.includes(item.slideIndex)
+                : false,
             }),
           });
           
