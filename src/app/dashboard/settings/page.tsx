@@ -48,6 +48,14 @@ export default function SettingsPage() {
   const [profileAvatar, setProfileAvatar] = useState<string>("");
   const [faceImages, setFaceImages] = useState<string[]>([]);
 
+  // Plan state
+  const [planInfo, setPlanInfo] = useState<{
+    plan: string;
+    trialEndsAt: string | null;
+    planExpiresAt: string | null;
+    carouselsThisMonth: number;
+  } | null>(null);
+
   // API key state
   const [geminiKey, setGeminiKey] = useState("");
   const [savingKey, setSavingKey] = useState(false);
@@ -97,6 +105,15 @@ export default function SettingsPage() {
         if (d.textModel) setTextModel(d.textModel);
         if (d.imageModel) setImageModel(d.imageModel);
       })
+      .catch(() => {});
+    fetch("/api/user/profile")
+      .then(r => r.json())
+      .then(d => setPlanInfo({
+        plan: d.plan || "free",
+        trialEndsAt: d.trialEndsAt || null,
+        planExpiresAt: d.planExpiresAt || null,
+        carouselsThisMonth: d.carouselsThisMonth || 0,
+      }))
       .catch(() => {});
   }, []);
 
@@ -385,16 +402,69 @@ export default function SettingsPage() {
         {activeSection === "plano" && (
           <div>
             <h2 className="text-h2 text-text-primary mb-8">Plano & Cobrança</h2>
-            <div className="bg-bg-surface border border-border-subtle rounded-lg p-8">
-              <div className="flex items-center justify-between py-6">
-                <div>
-                  <div className="text-body font-medium text-text-primary mb-1">Gerenciar plano</div>
-                  <div className="text-caption text-text-secondary">Ver detalhes e upgrade</div>
-                </div>
-                <a href="/dashboard/upgrade">
-                  <Button variant="secondary" size="md">Ver planos</Button>
-                </a>
-              </div>
+            <div className="bg-bg-surface border border-border-subtle rounded-lg p-8 space-y-0">
+              {planInfo ? (() => {
+                const now = new Date();
+                const trialEnd = planInfo.trialEndsAt ? new Date(planInfo.trialEndsAt) : null;
+                const planEnd = planInfo.planExpiresAt ? new Date(planInfo.planExpiresAt) : null;
+                const isInTrial = !!(trialEnd && trialEnd > now);
+                const isPro = planInfo.plan === "pro" && !!(planEnd && planEnd > now);
+                const isStudio = planInfo.plan === "studio" && !!(planEnd && planEnd > now);
+                const daysLeft = (date: Date) => Math.max(0, Math.ceil((date.getTime() - now.getTime()) / 86400000));
+
+                const planLabel = isStudio ? "Studio" : isPro ? "Pro" : isInTrial ? "Trial" : "Free";
+                const planColor = isStudio ? "text-purple-400" : isPro ? "text-accent" : isInTrial ? "text-yellow-400" : "text-text-secondary";
+
+                return (
+                  <>
+                    <SettingsRow label="Plano atual" helper="Seu plano de acesso ativo">
+                      <div className={`text-h3 font-bold ${planColor}`}>{planLabel}</div>
+                    </SettingsRow>
+
+                    {isInTrial && (
+                      <SettingsRow label="Trial expira em" helper="Após isso, upgrade necessário para continuar">
+                        <div className="flex items-center gap-3">
+                          <span className="text-h3 font-bold text-yellow-400">{daysLeft(trialEnd!)} dias</span>
+                          <span className="text-caption text-text-tertiary">({trialEnd!.toLocaleDateString("pt-BR")})</span>
+                        </div>
+                      </SettingsRow>
+                    )}
+
+                    {(isPro || isStudio) && planEnd && (
+                      <SettingsRow label="Plano expira em" helper="Renovação automática via Stripe">
+                        <div className="flex items-center gap-3">
+                          <span className="text-h3 font-bold text-accent">{daysLeft(planEnd)} dias</span>
+                          <span className="text-caption text-text-tertiary">({planEnd.toLocaleDateString("pt-BR")})</span>
+                        </div>
+                      </SettingsRow>
+                    )}
+
+                    {isPro && (
+                      <SettingsRow label="Carrosséis este mês" helper="Limite: 100/mês no Pro">
+                        <div className="flex items-center gap-2">
+                          <div className="w-40 h-2 bg-bg-base rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-accent rounded-full transition-all"
+                              style={{ width: `${Math.min(100, (planInfo.carouselsThisMonth / 100) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-caption text-text-secondary">{planInfo.carouselsThisMonth}/100</span>
+                        </div>
+                      </SettingsRow>
+                    )}
+
+                    <div className="pt-6 flex gap-3">
+                      <a href="/dashboard/upgrade">
+                        <Button variant={isPro || isStudio ? "secondary" : "primary"} size="md">
+                          {isPro || isStudio ? "Ver planos" : "Fazer upgrade"}
+                        </Button>
+                      </a>
+                    </div>
+                  </>
+                );
+              })() : (
+                <div className="py-6 text-text-tertiary text-caption">Carregando...</div>
+              )}
             </div>
           </div>
         )}

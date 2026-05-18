@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [raw, setRaw] = React.useState<RawCarousel[] | null>(null);
   const [user, setUser] = React.useState<{ name: string; imagesUsed: number; imagesLimit: number; weekCreated: number } | null>(null);
+  const [trialBanner, setTrialBanner] = React.useState<{ daysLeft: number } | null>(null);
   const [filter, setFilter] = React.useState<FilterValue>("todos");
   const [query, setQuery] = React.useState("");
   const [view, setView] = React.useState<ViewMode>("grid");
@@ -100,6 +101,21 @@ export default function DashboardPage() {
           imagesLimit: u.imagesLimit ?? 100,
           weekCreated: u.weekCreated ?? 0,
         });
+      } catch { /* ignore */ }
+
+      // Check trial status
+      try {
+        const r = await fetch("/api/user/profile", { cache: "no-store" });
+        if (!r.ok) return;
+        const p = await r.json();
+        if (!alive) return;
+        const now = new Date();
+        const trialEnd = p.trialEndsAt ? new Date(p.trialEndsAt) : null;
+        const isPaidPlan = (p.plan === "pro" || p.plan === "studio") && p.planExpiresAt && new Date(p.planExpiresAt) > now;
+        if (trialEnd && trialEnd > now && !isPaidPlan) {
+          const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / 86400000));
+          setTrialBanner({ daysLeft });
+        }
       } catch { /* ignore */ }
     })();
     return () => { alive = false; };
@@ -176,6 +192,21 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col">
+      {trialBanner && (
+        <div className="flex items-center justify-between gap-4 px-6 py-3 bg-yellow-500/10 border-b border-yellow-500/20">
+          <div className="flex items-center gap-2 text-sm text-yellow-400">
+            <span>⏳</span>
+            <span>
+              Você está no <strong>período de trial</strong> — {trialBanner.daysLeft === 0
+                ? "expira hoje!"
+                : `${trialBanner.daysLeft} dia${trialBanner.daysLeft !== 1 ? "s" : ""} restante${trialBanner.daysLeft !== 1 ? "s" : ""}.`}
+            </span>
+          </div>
+          <a href="/dashboard/upgrade" className="text-xs font-semibold text-yellow-400 underline underline-offset-2 hover:text-yellow-300 whitespace-nowrap">
+            Ver planos →
+          </a>
+        </div>
+      )}
       <MetricStrip
         name={user?.name ?? "criador"}
         totalActive={items?.length ?? 0}
