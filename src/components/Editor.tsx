@@ -636,7 +636,7 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
       i: selectedSlide,
       title: (titleEl?.text || "TÍTULO DO SLIDE").toUpperCase(),
       body: bodyEl?.text || "Texto do corpo aqui.",
-      accentColor: accentColor,
+      accentColor: draft.accentColor || "#FFD700",
       handle: profEl?.text || "@seuhandle",
       imagePrompt: (imageEl as any)?.imagePrompt || "",
     };
