@@ -6,13 +6,12 @@ export interface IAppConfig extends Document {
   maintenanceBanner: string;
   announcementBanner: string;
   announcementActive: boolean;
-  // Mercado Pago
-  mpAccessToken: string;
-  mpPublicKey: string;
-  mpWebhookSecret: string;
-  mpEnabled: boolean;
-  mpProPriceReais: number;
-  mpStudioPriceReais: number;
+  // Stripe
+  stripeSecretKey: string;
+  stripePublishableKey: string;
+  stripePriceIdPro: string;
+  stripePriceIdStudio: string;
+  stripeWebhookSecret: string;
   trialDays: number;
   // reCAPTCHA
   recaptchaSiteKey: string;
@@ -26,12 +25,11 @@ const AppConfigSchema = new Schema<IAppConfig>({
   maintenanceBanner: { type: String, default: "Estamos em manutenção. Voltamos em breve." },
   announcementBanner: { type: String, default: "" },
   announcementActive: { type: Boolean, default: false },
-  mpAccessToken: { type: String, default: "" },
-  mpPublicKey: { type: String, default: "" },
-  mpWebhookSecret: { type: String, default: "" },
-  mpEnabled: { type: Boolean, default: false },
-  mpProPriceReais: { type: Number, default: 97 },
-  mpStudioPriceReais: { type: Number, default: 149 },
+  stripeSecretKey: { type: String, default: "" },
+  stripePublishableKey: { type: String, default: "" },
+  stripePriceIdPro: { type: String, default: "" },
+  stripePriceIdStudio: { type: String, default: "" },
+  stripeWebhookSecret: { type: String, default: "" },
   trialDays: { type: Number, default: 7 },
   recaptchaSiteKey: { type: String, default: "" },
   recaptchaSecretKey: { type: String, default: "" },
