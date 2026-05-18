@@ -9,8 +9,13 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
     await connectDB();
-    const user = await User.findById(session.userId).select("+faceReferenceImages name brandAccentColor profileAvatarUrl colorPalettes");
+    const user = await User.findById(session.userId).select("+faceReferenceImages name brandAccentColor profileAvatarUrl colorPalettes plan planExpiresAt trialEndsAt carouselsThisMonth");
     if (!user) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+
+    const now = new Date();
+    const isInTrial = !!(user.trialEndsAt && new Date(user.trialEndsAt) > now);
+    const isPro = user.plan === "pro" && !!(user.planExpiresAt && new Date(user.planExpiresAt) > now);
+    const isStudio = user.plan === "studio" && !!(user.planExpiresAt && new Date(user.planExpiresAt) > now);
 
     return NextResponse.json({
       name: user.name || "",
@@ -19,6 +24,13 @@ export async function GET() {
       faceReferenceImages: user.faceReferenceImages || [],
       hasFaceImages: (user.faceReferenceImages?.length || 0) > 0,
       profileAvatarUrl: user.profileAvatarUrl || "",
+      plan: user.plan || "free",
+      planExpiresAt: user.planExpiresAt || null,
+      trialEndsAt: user.trialEndsAt || null,
+      isInTrial,
+      isPro,
+      isStudio,
+      carouselsThisMonth: user.carouselsThisMonth ?? 0,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro interno";

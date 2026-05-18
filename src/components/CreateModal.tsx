@@ -98,6 +98,19 @@ export default function CreateModal(props: CreateModalProps) {
       });
       for (let i = 1; i <= 4; i++) { await wait(700); setGenStep(i); }
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGenStep(null);
+        if (res.status === 403) {
+          const msg = data?.reason === "LIMIT_REACHED"
+            ? "Limite de 100 carrosséis mensais atingido. Faça upgrade para Studio."
+            : "Seu período de acesso expirou. Assine um plano para continuar.";
+          alert(msg + "\n\nRedirecionando para upgrade...");
+          router.push("/dashboard/upgrade");
+        } else {
+          alert(data?.error || "Erro ao gerar carrossel.");
+        }
+        return;
+      }
       const id = data?.id ?? data?._id ?? data?.carouselId;
       if (id) {
         onCreated?.(id);
