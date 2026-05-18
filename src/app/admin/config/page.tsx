@@ -11,6 +11,8 @@ interface AppConfig {
   mpWebhookSecret: string;
   mpEnabled: boolean;
   mpProPriceReais: number;
+  mpStudioPriceReais: number;
+  trialDays: number;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
   recaptchaEnabled: boolean;
@@ -87,6 +89,8 @@ export default function AdminConfigPage() {
         mpWebhookSecret: d.mpWebhookSecret ?? "",
         mpEnabled: d.mpEnabled ?? false,
         mpProPriceReais: d.mpProPriceReais ?? 97,
+          mpStudioPriceReais: d.mpStudioPriceReais ?? 149,
+          trialDays: d.trialDays ?? 7,
         recaptchaSiteKey: d.recaptchaSiteKey ?? "",
         recaptchaSecretKey: d.recaptchaSecretKey ?? "",
         recaptchaEnabled: d.recaptchaEnabled ?? false,
@@ -183,6 +187,27 @@ export default function AdminConfigPage() {
             type="number"
             min={1}
           />
+        </div>
+        <div style={fieldS}>
+          <label style={labelS}>Preço do Plano Studio (R$)</label>
+          <input
+            value={cfg.mpStudioPriceReais ?? 149}
+            onChange={(e) => set("mpStudioPriceReais", Number(e.target.value))}
+            style={{ ...inputS, width: 120 }}
+            type="number"
+            min={1}
+          />
+        </div>
+        <div style={fieldS}>
+          <label style={labelS}>Dias de Trial Gratuito</label>
+          <input
+            value={cfg.trialDays ?? 7}
+            onChange={(e) => set("trialDays", Number(e.target.value))}
+            style={{ ...inputS, width: 120 }}
+            type="number"
+            min={0}
+          />
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Aplicado a novos cadastros. Não altera trials existentes.</div>
         </div>
         <div style={{ background: "#0d1a12", border: "1px solid #1a3020", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#4ade80" }}>
           <b>Webhook URL</b> para configurar no painel MP:<br />
