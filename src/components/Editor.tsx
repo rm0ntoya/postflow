@@ -828,14 +828,75 @@ export default function Editor({ carousel, generatingSlide = null, generatingPro
           </div>
         </aside>
 
-        {/* Task 6: CANVAS */}
-        <main style={{ gridArea: "canvas" }} className="relative overflow-auto bg-bg-base flex items-center justify-center">
-          <span className="text-caption text-text-tertiary">Canvas — Task 6</span>
+        {/* CANVAS */}
+        <main
+          style={{ gridArea: "canvas" }}
+          className="relative overflow-auto bg-bg-base flex items-center justify-center"
+          onClick={() => setSelectedEl(null)}
+        >
+          <div className="flex flex-col gap-8 py-10 px-8 items-center">
+            {draft.slides.map((s, i) => (
+              <SlideCanvas
+                key={s.id}
+                slide={s}
+                index={i}
+                selected={selectedSlide === i}
+                selectedEl={selectedSlide === i ? selectedEl : null}
+                zoom={zoom}
+                isGenerating={generatingSlide === i}
+                generatingProgress={generatingProgress}
+                regenLoading={regenLoading === `${i}-bg`}
+                onSlideClick={() => { setSelectedSlide(i); setSelectedEl(null); }}
+                onElMouseDown={onElMouseDown}
+                onElDblClick={(elId) => { setSelectedSlide(i); setSelectedEl(elId); }}
+                onTextChange={(elId, text) => updateEl(i, elId, { text })}
+                onRegenBg={() => setRegenTarget({ slideIndex: i })}
+              />
+            ))}
+          </div>
         </main>
 
-        {/* Task 7-10: INSPECTOR */}
+        {/* INSPECTOR */}
         <aside style={{ gridArea: "inspector" }} className="bg-bg-surface border-l border-border-subtle overflow-y-auto">
-          <span className="text-caption text-text-tertiary p-4 block">Inspector — Tasks 7-10</span>
+          <div className="flex border-b border-border-subtle">
+            {["design", "background", "layers"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setPropsTab(tab)}
+                className={`flex-1 py-2.5 text-caption font-medium transition-colors capitalize ${
+                  propsTab === tab
+                    ? "text-accent border-b-2 border-accent"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {tab === "design" ? "Design" : tab === "background" ? "Fundo" : "Camadas"}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-4">
+            {propsTab === "design" && el?.type === "text" && (
+              <TextProps el={el} accentColor={accentColor} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)} />
+            )}
+            {propsTab === "design" && el?.type === "shape" && (
+              <ShapeProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)} />
+            )}
+            {propsTab === "design" && el?.type === "image" && (
+              <ImageProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)} onRegenerate={() => setRegenTarget({ slideIndex: selectedSlide, elementId: el.id })} />
+            )}
+            {propsTab === "design" && el?.type === "profile" && (
+              <ProfileProps el={el} update={(p) => updateEl(selectedSlide, el.id, p)} onDelete={() => deleteEl(selectedSlide, el.id)} />
+            )}
+            {propsTab === "design" && !el && slide && (
+              <SlidePropsPanel slide={slide} idx={selectedSlide} totalSlides={draft.slides.length} onDuplicate={() => duplicateSlide(selectedSlide)} onDelete={() => deleteSlide(selectedSlide)} />
+            )}
+            {propsTab === "background" && slide && (
+              <BackgroundPropsPanel slide={slide} update={(p) => updateSlide(selectedSlide, p)} onRegenBg={slide.bgImageUrl ? () => setRegenTarget({ slideIndex: selectedSlide }) : undefined} />
+            )}
+            {propsTab === "layers" && slide && (
+              <LayersList slide={slide} selected={selectedEl} onSelect={setSelectedEl} onDelete={(id) => deleteEl(selectedSlide, id)} />
+            )}
+          </div>
         </aside>
       </div>
     </>
