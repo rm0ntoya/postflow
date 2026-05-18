@@ -53,8 +53,9 @@ export async function POST(req: NextRequest) {
       const planType = session.metadata?.planType as "pro" | "studio" | undefined;
 
       if (!userId || !planType || !["pro", "studio"].includes(planType)) {
-        console.error("[webhook/stripe] Invalid metadata:", { userId, planType });
-        return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
+        console.error("[webhook/stripe] Invalid metadata in checkout session:", { userId, planType });
+        // Return 200 so Stripe doesn't retry this event
+        return NextResponse.json({ received: true }, { status: 200 });
       }
 
       // Update user plan
@@ -95,13 +96,11 @@ export async function POST(req: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.userId;
       if (!userId) {
-        console.error("[webhook/stripe] Subscription deletion without userId in metadata", {
+        console.error("[webhook/stripe] Subscription deletion without userId", {
           subscriptionId: subscription.id,
         });
-        return NextResponse.json(
-          { error: "Cannot process subscription deletion without userId" },
-          { status: 400 }
-        );
+        // Return 200 so Stripe doesn't retry this invalid event
+        return NextResponse.json({ received: true }, { status: 200 });
       }
 
       try {
