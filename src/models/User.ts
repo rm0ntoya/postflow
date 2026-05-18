@@ -42,6 +42,7 @@ export interface IUser extends Document {
   carouselsThisMonth: number;
   usageResetAt: Date;
   stripePaymentId?: string;
+  stripeCustomerId?: string;
   planExpiresAt?: Date;
   trialEndsAt?: Date;
   createdAt: Date;
@@ -77,6 +78,7 @@ const UserSchema = new Schema<IUser>(
     carouselsThisMonth: { type: Number, default: 0 },
     usageResetAt: { type: Date, default: () => new Date() },
     stripePaymentId: { type: String },
+    stripeCustomerId: { type: String },
     planExpiresAt: { type: Date },
     trialEndsAt: { type: Date },
   },
