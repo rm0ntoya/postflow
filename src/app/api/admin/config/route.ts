@@ -25,7 +25,24 @@ export async function PATCH(req: NextRequest) {
     await connectDB();
     const raw = await req.json();
 
-    const allowed = ["maintenanceMode", "maintenanceBanner", "announcementBanner", "announcementActive"] as const;
+    const allowed = [
+      "trialDays",
+      "recaptchaSiteKey",
+      "recaptchaSecretKey",
+      "recaptchaEnabled",
+      "stripeSecretKey",
+      "stripePublishableKey",
+      "stripePriceIdPro",
+      "stripePriceIdStudio",
+      "stripeWebhookSecret",
+      "banners",
+      "maintenance",
+      "announcement",
+      "maintenanceMode",
+      "maintenanceBanner",
+      "announcementBanner",
+      "announcementActive",
+    ] as const;
     const body: Partial<Record<typeof allowed[number], unknown>> = {};
     for (const key of allowed) {
       if (key in raw) body[key] = raw[key];
