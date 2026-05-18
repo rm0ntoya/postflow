@@ -17,6 +17,22 @@ export async function POST(req: NextRequest) {
 
   const stripe = new Stripe(stripeSecretKey);
 
+  // Connect to DB FIRST
+  try {
+    await connectDB();
+  } catch (dbErr) {
+    console.error("[webhook/stripe] Database connection failed");
+    return NextResponse.json({ error: "Database error" }, { status: 503 });
+  }
+
+  // Load config after DB is connected
+  const config = await AppConfig.findOne();
+  if (!config?.stripeWebhookSecret) {
+    console.error("[webhook/stripe] Webhook secret not configured");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
+
+  // Verify signature
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
@@ -25,23 +41,11 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
   try {
     const body = await req.text();
-    const config = await AppConfig.findOne();
-    if (!config?.stripeWebhookSecret) {
-      console.error("[webhook/stripe] Webhook secret not configured");
-      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
-    }
     event = stripe.webhooks.constructEvent(body, signature, config.stripeWebhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[webhook/stripe] Signature verification failed:", message);
     return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
-  }
-
-  try {
-    await connectDB();
-  } catch (dbErr) {
-    console.error("[webhook/stripe] Database connection failed");
-    return NextResponse.json({ error: "Database error" }, { status: 503 });
   }
 
   try {
@@ -58,9 +62,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
 
-      // Update user plan
-      const planExpiresAt = new Date();
-      planExpiresAt.setMonth(planExpiresAt.getMonth() + 1);
+      // Update user plan — use Stripe's actual subscription period end when available
+      const sessionAny = session as Record<string, unknown>;
+      const planExpiresAt = typeof sessionAny.current_period_end === "number"
+        ? new Date((sessionAny.current_period_end as number) * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
       if (session.payment_intent) {
         await User.findByIdAndUpdate(
@@ -82,7 +88,6 @@ export async function POST(req: NextRequest) {
             planType,
             amountBRL: session.amount_total ? Math.round(session.amount_total / 100) : 0,
             status: "approved",
-            createdAt: new Date(session.created * 1000),
           },
           { upsert: true }
         );
