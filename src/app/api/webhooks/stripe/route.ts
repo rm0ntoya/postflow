@@ -79,34 +79,34 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (session.payment_intent) {
-        await User.findByIdAndUpdate(
+      // Update user plan — payment_intent is null for subscriptions, use subscription ID as fallback
+      const paymentRef = (session.payment_intent as string | null) || (session.subscription as string | null) || session.id;
+
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          plan: planType,
+          planExpiresAt,
+          stripePaymentId: paymentRef,
+        },
+        { new: true }
+      );
+
+      // Record payment
+      await Payment.findOneAndUpdate(
+        { stripePaymentId: paymentRef },
+        {
           userId,
-          {
-            plan: planType,
-            planExpiresAt,
-            stripePaymentId: session.payment_intent,
-          },
-          { new: true }
-        );
+          stripePaymentId: paymentRef,
+          planType,
+          amountBRL: session.amount_total ? Math.round(session.amount_total / 100) : 0,
+          status: "approved",
+        },
+        { upsert: true }
+      );
 
-        // Record payment
-        await Payment.findOneAndUpdate(
-          { stripePaymentId: session.payment_intent },
-          {
-            userId,
-            stripePaymentId: session.payment_intent,
-            planType,
-            amountBRL: session.amount_total ? Math.round(session.amount_total / 100) : 0,
-            status: "approved",
-          },
-          { upsert: true }
-        );
+      console.log(`[webhook/stripe] Payment approved for user ${userId}, plan ${planType}`);
 
-        console.log(`[webhook/stripe] Payment approved for user ${userId}, plan ${planType}`);
-      } else {
-        console.warn("[webhook/stripe] No payment_intent, skipping payment record", { userId, planType });
-      }
     } else if (event.type === "customer.subscription.deleted") {
       // Handle subscription cancellation
       const subscription = event.data.object as Stripe.Subscription;
