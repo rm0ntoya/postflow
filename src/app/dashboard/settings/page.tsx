@@ -55,6 +55,24 @@ export default function SettingsPage() {
     planExpiresAt: string | null;
     carouselsThisMonth: number;
   } | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
+
+  async function handleManageSubscription() {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch("/api/checkout/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.portalUrl) {
+        window.location.href = data.portalUrl;
+      } else {
+        showToast(data.error || "Erro ao abrir portal.");
+      }
+    } catch {
+      showToast("Erro de conexão.");
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
 
   // API key state
   const [geminiKey, setGeminiKey] = useState("");
@@ -459,6 +477,16 @@ export default function SettingsPage() {
                           {isPro || isStudio ? "Ver planos" : "Fazer upgrade"}
                         </Button>
                       </a>
+                      {(isPro || isStudio) && (
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          onClick={handleManageSubscription}
+                          loading={openingPortal}
+                        >
+                          Gerenciar assinatura
+                        </Button>
+                      )}
                     </div>
                   </>
                 );
