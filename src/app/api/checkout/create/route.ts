@@ -4,8 +4,6 @@ import { connectDB } from "@/lib/mongodb";
 import AppConfig from "@/models/AppConfig";
 import { getSessionUser } from "@/lib/auth";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
-
 export async function POST(req: NextRequest) {
   const session = await getSessionUser();
   if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -23,6 +21,8 @@ export async function POST(req: NextRequest) {
       { status: 503 }
     );
   }
+
+  const stripe = new Stripe(config.stripeSecretKey);
 
   const priceIdMap: Record<string, string> = {
     pro: config.stripePriceIdPro,
