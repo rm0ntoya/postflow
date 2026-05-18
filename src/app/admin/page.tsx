@@ -30,7 +30,7 @@ async function getStats() {
     getAppConfig(),
   ]);
 
-  const mrrEstimated = (proUsers * (config.mpProPriceReais ?? 49)) + (studioUsers * (config.mpStudioPriceReais ?? 149));
+  const mrrEstimated = (proUsers * 49) + (studioUsers * 149);  // Prices in BRL (Pro: 49, Studio: 149)
   const conversionRate = totalUsers > 0 ? Math.round(((proUsers + studioUsers) / totalUsers) * 100) : 0;
 
   return { totalUsers, totalCarousels, newUsersToday, newUsersWeek, usersWithKey, bannedUsers, adminCount, carouselsToday, proUsers, studioUsers, trialUsers, mrrEstimated, conversionRate, maintenanceMode: config.maintenanceMode };

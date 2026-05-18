@@ -12,7 +12,6 @@ export async function GET() {
       recaptchaSiteKey: cfg.recaptchaEnabled ? cfg.recaptchaSiteKey : "",
       mpEnabled: cfg.mpEnabled,
       mpPublicKey: cfg.mpEnabled ? cfg.mpPublicKey : "",
-      mpProPriceReais: cfg.mpProPriceReais,
     });
   } catch {
     return NextResponse.json({ recaptchaEnabled: false, mpEnabled: false });
