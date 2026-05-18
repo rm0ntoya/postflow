@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const total = countResult[0]?.total || 0;
 
     // Enrich with user info
-    const userIds = [...new Set(carousels.map((c: { userId: unknown }) => String(c.userId)))];
+    const userIds = Array.from(new Set(carousels.map((c: { userId: unknown }) => String(c.userId))));
     const users = await User.find({ _id: { $in: userIds } }).select("name email").lean();
     const userMap = Object.fromEntries(users.map((u: { _id: unknown; name: string; email: string }) => [String(u._id), u]));
     const enriched = carousels.map((c: { userId: unknown }) => ({ ...c, user: userMap[String(c.userId)] || null }));
