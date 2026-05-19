@@ -8,7 +8,7 @@ api/data
 .env.local
 .env.*.local
 docs/
-img/
+/img/
 scratch/
 criadores/
 carrossel-templates/
